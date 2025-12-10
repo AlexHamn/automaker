@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAppStore } from "@/store/app-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   Settings,
   Key,
@@ -32,9 +33,28 @@ import {
   Square,
   Maximize2,
   FlaskConical,
+  Trash2,
+  Folder,
 } from "lucide-react";
 import { getElectronAPI } from "@/lib/electron";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+// Navigation items for the side panel
+const NAV_ITEMS = [
+  { id: "api-keys", label: "API Keys", icon: Key },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "kanban", label: "Kanban Display", icon: LayoutGrid },
+  { id: "defaults", label: "Feature Defaults", icon: FlaskConical },
+  { id: "danger", label: "Danger Zone", icon: Trash2 },
+];
 
 export function SettingsView() {
   const {
@@ -47,6 +67,8 @@ export function SettingsView() {
     setKanbanCardDetailLevel,
     defaultSkipTests,
     setDefaultSkipTests,
+    currentProject,
+    moveProjectToTrash,
   } = useAppStore();
   const [anthropicKey, setAnthropicKey] = useState(apiKeys.anthropic);
   const [googleKey, setGoogleKey] = useState(apiKeys.google);
@@ -101,6 +123,9 @@ export function SettingsView() {
     success: boolean;
     message: string;
   } | null>(null);
+  const [activeSection, setActiveSection] = useState("api-keys");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setAnthropicKey(apiKeys.anthropic);
@@ -131,6 +156,52 @@ export function SettingsView() {
     checkCliStatus();
   }, []);
 
+  // Track scroll position to highlight active nav item
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const sections = NAV_ITEMS.map((item) => ({
+        id: item.id,
+        element: document.getElementById(item.id),
+      })).filter((s) => s.element);
+
+      const containerRect = container.getBoundingClientRect();
+      const scrollTop = container.scrollTop;
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section.element) {
+          const rect = section.element.getBoundingClientRect();
+          const relativeTop = rect.top - containerRect.top + scrollTop;
+          if (scrollTop >= relativeTop - 100) {
+            setActiveSection(section.id);
+            break;
+          }
+        }
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToSection = useCallback((sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+
+      container.scrollTo({
+        top: relativeTop - 24,
+        behavior: "smooth",
+      });
+    }
+  }, []);
+
   const handleTestConnection = async () => {
     setTestingConnection(true);
     setTestResult(null);
@@ -157,7 +228,7 @@ export function SettingsView() {
           message: data.error || "Failed to connect to Claude API.",
         });
       }
-    } catch (error) {
+    } catch {
       setTestResult({
         success: false,
         message: "Network error. Please check your connection.",
@@ -193,7 +264,7 @@ export function SettingsView() {
           message: data.error || "Failed to connect to Gemini API.",
         });
       }
-    } catch (error) {
+    } catch {
       setGeminiTestResult({
         success: false,
         message: "Network error. Please check your connection.",
@@ -246,7 +317,7 @@ export function SettingsView() {
           });
         }
       }
-    } catch (error) {
+    } catch {
       setOpenaiTestResult({
         success: false,
         message: "Network error. Please check your connection.",
@@ -288,23 +359,60 @@ export function SettingsView() {
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* API Keys Section */}
-          <div className="rounded-xl border border-border bg-card backdrop-blur-md overflow-hidden">
-            <div className="p-6 border-b border-border">
-              <div className="flex items-center gap-2 mb-2">
-                <Key className="w-5 h-5 text-brand-500" />
-                <h2 className="text-lg font-semibold text-foreground">
-                  API Keys
-                </h2>
+      {/* Content Area with Sidebar */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sticky Side Navigation */}
+        <nav className="hidden lg:block w-48 shrink-0 border-r border-border bg-card/50 backdrop-blur-sm">
+          <div className="sticky top-0 p-4 space-y-1">
+            {NAV_ITEMS.filter((item) => item.id !== "danger" || currentProject).map(
+              (item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => scrollToSection(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
+                      isActive
+                        ? "bg-brand-500/10 text-brand-500 border border-brand-500/20"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 shrink-0",
+                        isActive ? "text-brand-500" : ""
+                      )}
+                    />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              }
+            )}
+          </div>
+        </nav>
+
+        {/* Scrollable Content */}
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* API Keys Section */}
+            <div
+              id="api-keys"
+              className="rounded-xl border border-border bg-card backdrop-blur-md overflow-hidden scroll-mt-6"
+            >
+              <div className="p-6 border-b border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Key className="w-5 h-5 text-brand-500" />
+                  <h2 className="text-lg font-semibold text-foreground">
+                    API Keys
+                  </h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Configure your AI provider API keys. Keys are stored locally in
+                  your browser.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Configure your AI provider API keys. Keys are stored locally in
-                your browser.
-              </p>
-            </div>
             <div className="p-6 space-y-6">
               {/* Claude/Anthropic API Key */}
               <div className="space-y-3">
@@ -592,7 +700,7 @@ export function SettingsView() {
                 <div className="text-sm">
                   <p className="font-medium text-yellow-500">Security Notice</p>
                   <p className="text-yellow-500/80 text-xs mt-1">
-                    API keys are stored in your browser's local storage. Never
+                    API keys are stored in your browser&apos;s local storage. Never
                     share your API keys or commit them to version control.
                   </p>
                 </div>
@@ -780,7 +888,10 @@ export function SettingsView() {
           )}
 
           {/* Appearance Section */}
-          <div className="rounded-xl border border-border bg-card backdrop-blur-md overflow-hidden">
+          <div
+            id="appearance"
+            className="rounded-xl border border-border bg-card backdrop-blur-md overflow-hidden scroll-mt-6"
+          >
             <div className="p-6 border-b border-border">
               <div className="flex items-center gap-2 mb-2">
                 <Palette className="w-5 h-5 text-brand-500" />
@@ -958,7 +1069,10 @@ export function SettingsView() {
           </div>
 
           {/* Kanban Card Display Section */}
-          <div className="rounded-xl border border-border bg-card backdrop-blur-md overflow-hidden">
+          <div
+            id="kanban"
+            className="rounded-xl border border-border bg-card backdrop-blur-md overflow-hidden scroll-mt-6"
+          >
             <div className="p-6 border-b border-border">
               <div className="flex items-center gap-2 mb-2">
                 <LayoutGrid className="w-5 h-5 text-brand-500" />
@@ -1036,7 +1150,10 @@ export function SettingsView() {
           </div>
 
           {/* Feature Defaults Section */}
-          <div className="rounded-xl border border-border bg-card backdrop-blur-md overflow-hidden">
+          <div
+            id="defaults"
+            className="rounded-xl border border-border bg-card backdrop-blur-md overflow-hidden scroll-mt-6"
+          >
             <div className="p-6 border-b border-border">
               <div className="flex items-center gap-2 mb-2">
                 <FlaskConical className="w-5 h-5 text-brand-500" />
@@ -1078,6 +1195,51 @@ export function SettingsView() {
             </div>
           </div>
 
+          {/* Delete Project Section - Only show when a project is selected */}
+          {currentProject && (
+            <div
+              id="danger"
+              className="rounded-xl border border-destructive/30 bg-card backdrop-blur-md overflow-hidden scroll-mt-6"
+            >
+              <div className="p-6 border-b border-destructive/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Trash2 className="w-5 h-5 text-destructive" />
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Danger Zone
+                  </h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Permanently remove this project from Automaker.
+                </p>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-sidebar-accent/20 border border-sidebar-border flex items-center justify-center shrink-0">
+                      <Folder className="w-5 h-5 text-brand-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground truncate">
+                        {currentProject.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {currentProject.path}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteDialog(true)}
+                    data-testid="delete-project-button"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Project
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Save Button */}
           <div className="flex items-center gap-4">
             <Button
@@ -1105,6 +1267,64 @@ export function SettingsView() {
           </div>
         </div>
       </div>
+      </div>
+
+      {/* Delete Project Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="bg-popover border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              Delete Project
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Are you sure you want to move this project to Trash?
+            </DialogDescription>
+          </DialogHeader>
+
+          {currentProject && (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-sidebar-accent/10 border border-sidebar-border">
+              <div className="w-10 h-10 rounded-lg bg-sidebar-accent/20 border border-sidebar-border flex items-center justify-center shrink-0">
+                <Folder className="w-5 h-5 text-brand-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-foreground truncate">
+                  {currentProject.name}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {currentProject.path}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <p className="text-sm text-muted-foreground">
+            The folder will remain on disk until you permanently delete it from Trash.
+          </p>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (currentProject) {
+                  moveProjectToTrash(currentProject.id);
+                  setShowDeleteDialog(false);
+                }
+              }}
+              data-testid="confirm-delete-project"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Move to Trash
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

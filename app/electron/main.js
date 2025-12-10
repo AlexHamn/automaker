@@ -3,7 +3,7 @@ const path = require("path");
 // Load environment variables from .env file
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
 
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const fs = require("fs/promises");
 const agentService = require("./agent-service");
 const autoModeService = require("./auto-mode-service");
@@ -12,11 +12,11 @@ let mainWindow = null;
 
 // Get icon path - works in both dev and production
 function getIconPath() {
-  // In dev: __dirname is electron/, so ../public/icon_gold.png
+  // In dev: __dirname is electron/, so ../public/logo.png
   // In production: public folder is included in the app bundle
   return app.isPackaged
-    ? path.join(process.resourcesPath, "app", "public", "icon_gold.png")
-    : path.join(__dirname, "../public/icon_gold.png");
+    ? path.join(process.resourcesPath, "app", "public", "logo.png")
+    : path.join(__dirname, "../public/logo.png");
 }
 
 function createWindow() {
@@ -169,6 +169,15 @@ ipcMain.handle("fs:deleteFile", async (_, filePath) => {
   }
 });
 
+ipcMain.handle("fs:trashItem", async (_, targetPath) => {
+  try {
+    await shell.trashItem(targetPath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // App data path
 ipcMain.handle("app:getPath", (_, name) => {
   return app.getPath(name);
@@ -193,7 +202,9 @@ ipcMain.handle(
       await fs.mkdir(imagesDir, { recursive: true });
 
       // Generate unique filename with unique ID
-      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      const uniqueId = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 11)}`;
       const safeName = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
       const imageFilePath = path.join(imagesDir, `${uniqueId}_${safeName}`);
 

@@ -10,9 +10,18 @@ class PromptBuilder {
       ? `\n**⚠️ IMPORTANT - Manual Testing Mode:**\nThis feature has skipTests=true, which means:\n- DO NOT commit changes automatically\n- DO NOT mark as verified - it will automatically go to "waiting_approval" status\n- The user will manually review and commit the changes\n- Just implement the feature and mark it as verified (it will be converted to waiting_approval)\n`
       : "";
 
-    const imagesNote = feature.imagePaths && feature.imagePaths.length > 0
-      ? `\n**📎 Context Images Attached:**\nThe user has attached ${feature.imagePaths.length} image(s) for context. These images will be provided to you visually to help understand the requirements. Review them carefully before implementing.\n`
-      : "";
+    let imagesNote = "";
+    if (feature.imagePaths && feature.imagePaths.length > 0) {
+      const imagesList = feature.imagePaths.map((img, idx) =>
+        `   ${idx + 1}. ${img.filename} (${img.mimeType})\n      Path: ${img.path}`
+      ).join("\n");
+
+      imagesNote = `\n**📎 Context Images Attached:**\nThe user has attached ${feature.imagePaths.length} image(s) for context. These images are provided both visually (in the initial message) and as files you can read:
+
+${imagesList}
+
+You can use the Read tool to view these images at any time during implementation. Review them carefully before implementing.\n`;
+    }
 
     return `You are working on a feature implementation task.
 
@@ -121,9 +130,18 @@ Begin by reading the project structure and then implementing the feature.`;
       ? `\n**⚠️ IMPORTANT - Manual Testing Mode:**\nThis feature has skipTests=true, which means:\n- DO NOT commit changes automatically\n- DO NOT mark as verified - it will automatically go to "waiting_approval" status\n- The user will manually review and commit the changes\n- Just implement the feature and mark it as verified (it will be converted to waiting_approval)\n`
       : "";
 
-    const imagesNote = feature.imagePaths && feature.imagePaths.length > 0
-      ? `\n**📎 Context Images Attached:**\nThe user has attached ${feature.imagePaths.length} image(s) for context. These images will be provided to you visually to help understand the requirements. Review them carefully before implementing.\n`
-      : "";
+    let imagesNote = "";
+    if (feature.imagePaths && feature.imagePaths.length > 0) {
+      const imagesList = feature.imagePaths.map((img, idx) =>
+        `   ${idx + 1}. ${img.filename} (${img.mimeType})\n      Path: ${img.path}`
+      ).join("\n");
+
+      imagesNote = `\n**📎 Context Images Attached:**\nThe user has attached ${feature.imagePaths.length} image(s) for context. These images are provided both visually (in the initial message) and as files you can read:
+
+${imagesList}
+
+You can use the Read tool to view these images at any time during implementation. Review them carefully before implementing.\n`;
+    }
 
     return `You are implementing and verifying a feature until it is complete and working correctly.
 
@@ -224,9 +242,24 @@ Begin by reading the project structure and understanding what needs to be implem
       ? `\n**⚠️ IMPORTANT - Manual Testing Mode:**\nThis feature has skipTests=true, which means:\n- DO NOT commit changes automatically\n- DO NOT mark as verified - it will automatically go to "waiting_approval" status\n- The user will manually review and commit the changes\n- Just implement the feature and mark it as verified (it will be converted to waiting_approval)\n`
       : "";
 
-    const imagesNote = feature.imagePaths && feature.imagePaths.length > 0
-      ? `\n**📎 Context Images Attached:**\nThe user has attached ${feature.imagePaths.length} image(s) for context. These images will be provided to you visually to help understand the requirements. Review them carefully.\n`
-      : "";
+    // For resume, check both followUpImages and imagePaths
+    const imagePaths = feature.followUpImages || feature.imagePaths;
+    let imagesNote = "";
+    if (imagePaths && imagePaths.length > 0) {
+      const imagesList = imagePaths.map((img, idx) => {
+        // Handle both FeatureImagePath objects and simple path strings
+        const path = typeof img === 'string' ? img : img.path;
+        const filename = typeof img === 'string' ? path.split('/').pop() : img.filename;
+        const mimeType = typeof img === 'string' ? 'image/*' : img.mimeType;
+        return `   ${idx + 1}. ${filename} (${mimeType})\n      Path: ${path}`;
+      }).join("\n");
+
+      imagesNote = `\n**📎 Context Images Attached:**\nThe user has attached ${imagePaths.length} image(s) for context. These images are provided both visually (in the initial message) and as files you can read:
+
+${imagesList}
+
+You can use the Read tool to view these images at any time. Review them carefully.\n`;
+    }
 
     return `You are resuming work on a feature implementation that was previously started.
 

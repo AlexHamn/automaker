@@ -76,6 +76,7 @@ export interface ElectronAPI {
   exists: (filePath: string) => Promise<boolean>;
   stat: (filePath: string) => Promise<StatResult>;
   deleteFile: (filePath: string) => Promise<WriteResult>;
+  trashItem?: (filePath: string) => Promise<WriteResult>;
   getPath: (name: string) => Promise<string>;
   saveImageToTemp?: (data: string, filename: string, mimeType: string) => Promise<SaveImageResult>;
   autoMode?: AutoModeAPI;
@@ -150,6 +151,7 @@ const mockFeatures = [
 const STORAGE_KEYS = {
   PROJECTS: "automaker_projects",
   CURRENT_PROJECT: "automaker_current_project",
+  TRASHED_PROJECTS: "automaker_trashed_projects",
 } as const;
 
 // Mock file system using localStorage
@@ -367,6 +369,10 @@ export const getElectronAPI = (): ElectronAPI => {
 
     deleteFile: async (filePath: string) => {
       delete mockFileSystem[filePath];
+      return { success: true };
+    },
+
+    trashItem: async () => {
       return { success: true };
     },
 
@@ -828,6 +834,11 @@ export interface Project {
   lastOpened?: string;
 }
 
+export interface TrashedProject extends Project {
+  trashedAt: string;
+  deletedFromDisk?: boolean;
+}
+
 export const getStoredProjects = (): Project[] => {
   if (typeof window === "undefined") return [];
   const stored = localStorage.getItem(STORAGE_KEYS.PROJECTS);
@@ -868,4 +879,15 @@ export const addProject = (project: Project): void => {
 export const removeProject = (projectId: string): void => {
   const projects = getStoredProjects().filter((p) => p.id !== projectId);
   saveProjects(projects);
+};
+
+export const getStoredTrashedProjects = (): TrashedProject[] => {
+  if (typeof window === "undefined") return [];
+  const stored = localStorage.getItem(STORAGE_KEYS.TRASHED_PROJECTS);
+  return stored ? JSON.parse(stored) : [];
+};
+
+export const saveTrashedProjects = (projects: TrashedProject[]): void => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEYS.TRASHED_PROJECTS, JSON.stringify(projects));
 };

@@ -284,11 +284,7 @@ export function WelcomeView() {
         <div className="px-8 py-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-              <img
-                src="/icon_gold.png"
-                alt="Automaker Logo"
-                className="w-10 h-10"
-              />
+              <img src="/logo.png" alt="Automaker Logo" className="w-10 h-10" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">

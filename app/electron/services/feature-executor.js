@@ -699,7 +699,8 @@ class FeatureExecutor {
         const path = require("path");
         for (const imagePathObj of imagePaths) {
           try {
-            const imagePath = imagePathObj.path;
+            // Handle both string paths and FeatureImagePath objects
+            const imagePath = typeof imagePathObj === 'string' ? imagePathObj : imagePathObj.path;
             const imageBuffer = fs.readFileSync(imagePath);
             const base64Data = imageBuffer.toString("base64");
             const ext = path.extname(imagePath).toLowerCase();
@@ -710,7 +711,9 @@ class FeatureExecutor {
               ".gif": "image/gif",
               ".webp": "image/webp",
             };
-            const mediaType = mimeTypeMap[ext] || imagePathObj.mimeType || "image/png";
+            const mediaType = typeof imagePathObj === 'string'
+              ? (mimeTypeMap[ext] || "image/png")
+              : (mimeTypeMap[ext] || imagePathObj.mimeType || "image/png");
 
             contentBlocks.push({
               type: "image",
@@ -723,8 +726,9 @@ class FeatureExecutor {
 
             console.log(`[FeatureExecutor] Added image to resume prompt: ${imagePath}`);
           } catch (error) {
+            const errorPath = typeof imagePathObj === 'string' ? imagePathObj : imagePathObj.path;
             console.error(
-              `[FeatureExecutor] Failed to load image ${imagePathObj.path}:`,
+              `[FeatureExecutor] Failed to load image ${errorPath}:`,
               error
             );
           }

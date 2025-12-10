@@ -237,7 +237,7 @@ export function AgentOutputModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="w-[90vw] max-w-[90vw] max-h-[80vh] flex flex-col"
+        className="w-[60vw] max-w-[60vw] max-h-[80vh] flex flex-col"
         data-testid="agent-output-modal"
       >
         <DialogHeader className="flex-shrink-0">

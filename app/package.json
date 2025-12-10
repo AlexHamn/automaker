@@ -87,7 +87,7 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "icon": "public/icon_gold.png"
+      "icon": "public/logo.png"
     },
     "win": {
       "target": [
@@ -96,7 +96,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "public/icon_gold.png"
+      "icon": "public/logo.png"
     },
     "linux": {
       "target": [
@@ -110,7 +110,7 @@
         }
       ],
       "category": "Development",
-      "icon": "public/icon_gold.png"
+      "icon": "public/logo.png"
     },
     "nsis": {
       "oneClick": false,

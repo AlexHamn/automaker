@@ -181,6 +181,31 @@ class AutoModeService {
       return { success: true, passes: result.passes };
     } catch (error) {
       console.error("[AutoMode] Error running feature:", error);
+
+      // Write error to context file
+      try {
+        await contextManager.writeToContextFile(
+          projectPath,
+          featureId,
+          `\n\n❌ ERROR: ${error.message}\n\n${error.stack || ''}\n`
+        );
+      } catch (contextError) {
+        console.error("[AutoMode] Failed to write error to context:", contextError);
+      }
+
+      // Update feature status to waiting_approval so user can review the error
+      try {
+        await featureLoader.updateFeatureStatus(
+          featureId,
+          "waiting_approval",
+          projectPath,
+          null, // no summary
+          error.message // pass error message
+        );
+      } catch (statusError) {
+        console.error("[AutoMode] Failed to update feature status after error:", statusError);
+      }
+
       sendToRenderer({
         type: "auto_mode_error",
         error: error.message,
@@ -260,6 +285,31 @@ class AutoModeService {
       return { success: true, passes: result.passes };
     } catch (error) {
       console.error("[AutoMode] Error verifying feature:", error);
+
+      // Write error to context file
+      try {
+        await contextManager.writeToContextFile(
+          projectPath,
+          featureId,
+          `\n\n❌ ERROR: ${error.message}\n\n${error.stack || ''}\n`
+        );
+      } catch (contextError) {
+        console.error("[AutoMode] Failed to write error to context:", contextError);
+      }
+
+      // Update feature status to waiting_approval so user can review the error
+      try {
+        await featureLoader.updateFeatureStatus(
+          featureId,
+          "waiting_approval",
+          projectPath,
+          null, // no summary
+          error.message // pass error message
+        );
+      } catch (statusError) {
+        console.error("[AutoMode] Failed to update feature status after error:", statusError);
+      }
+
       sendToRenderer({
         type: "auto_mode_error",
         error: error.message,
@@ -400,6 +450,31 @@ class AutoModeService {
       return { success: true, passes: finalResult.passes };
     } catch (error) {
       console.error("[AutoMode] Error resuming feature:", error);
+
+      // Write error to context file
+      try {
+        await contextManager.writeToContextFile(
+          projectPath,
+          featureId,
+          `\n\n❌ ERROR: ${error.message}\n\n${error.stack || ''}\n`
+        );
+      } catch (contextError) {
+        console.error("[AutoMode] Failed to write error to context:", contextError);
+      }
+
+      // Update feature status to waiting_approval so user can review the error
+      try {
+        await featureLoader.updateFeatureStatus(
+          featureId,
+          "waiting_approval",
+          projectPath,
+          null, // no summary
+          error.message // pass error message
+        );
+      } catch (statusError) {
+        console.error("[AutoMode] Failed to update feature status after error:", statusError);
+      }
+
       sendToRenderer({
         type: "auto_mode_error",
         error: error.message,
@@ -544,6 +619,31 @@ class AutoModeService {
       });
     } catch (error) {
       console.error(`[AutoMode] Error running feature ${featureId}:`, error);
+
+      // Write error to context file
+      try {
+        await contextManager.writeToContextFile(
+          projectPath,
+          featureId,
+          `\n\n❌ ERROR: ${error.message}\n\n${error.stack || ''}\n`
+        );
+      } catch (contextError) {
+        console.error("[AutoMode] Failed to write error to context:", contextError);
+      }
+
+      // Update feature status to waiting_approval so user can review the error
+      try {
+        await featureLoader.updateFeatureStatus(
+          featureId,
+          "waiting_approval",
+          projectPath,
+          null, // no summary
+          error.message // pass error message
+        );
+      } catch (statusError) {
+        console.error("[AutoMode] Failed to update feature status after error:", statusError);
+      }
+
       sendToRenderer({
         type: "auto_mode_error",
         error: error.message,
@@ -761,6 +861,31 @@ class AutoModeService {
       });
     } catch (error) {
       console.error("[AutoMode] Error in follow-up:", error);
+
+      // Write error to context file
+      try {
+        await contextManager.writeToContextFile(
+          projectPath,
+          featureId,
+          `\n\n❌ ERROR: ${error.message}\n\n${error.stack || ''}\n`
+        );
+      } catch (contextError) {
+        console.error("[AutoMode] Failed to write error to context:", contextError);
+      }
+
+      // Update feature status to waiting_approval so user can review the error
+      try {
+        await featureLoader.updateFeatureStatus(
+          featureId,
+          "waiting_approval",
+          projectPath,
+          null, // no summary
+          error.message // pass error message
+        );
+      } catch (statusError) {
+        console.error("[AutoMode] Failed to update feature status after error:", statusError);
+      }
+
       sendToRenderer({
         type: "auto_mode_error",
         error: error.message,

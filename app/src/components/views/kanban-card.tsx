@@ -39,7 +39,6 @@ import {
   RotateCcw,
   StopCircle,
   Hand,
-  ArrowLeft,
   MessageSquare,
   GitCommit,
   Cpu,
@@ -49,6 +48,7 @@ import {
   Expand,
   FileText,
   MoreVertical,
+  AlertCircle,
 } from "lucide-react";
 import { CountUpTimer } from "@/components/ui/count-up-timer";
 import { getElectronAPI } from "@/lib/electron";
@@ -199,7 +199,10 @@ export function KanbanCard({
         "cursor-grab active:cursor-grabbing transition-all backdrop-blur-sm border-border relative kanban-card-content",
         isDragging && "opacity-50 scale-105 shadow-lg",
         isCurrentAutoTask &&
-          "border-running-indicator border-2 shadow-running-indicator/50 shadow-lg animate-pulse"
+          "border-running-indicator border-2 shadow-running-indicator/50 shadow-lg animate-pulse",
+        feature.error &&
+          !isCurrentAutoTask &&
+          "border-red-500 border-2 shadow-red-500/30 shadow-lg"
       )}
       data-testid={`kanban-card-${feature.id}`}
       {...attributes}
@@ -214,7 +217,7 @@ export function KanbanCard({
         </div>
       )}
       {/* Skip Tests indicator badge */}
-      {feature.skipTests && (
+      {feature.skipTests && !feature.error && (
         <div
           className={cn(
             "absolute px-1.5 py-0.5 text-[10px] font-medium rounded flex items-center gap-1 z-10",
@@ -226,6 +229,21 @@ export function KanbanCard({
         >
           <Hand className="w-3 h-3" />
           <span>Manual</span>
+        </div>
+      )}
+      {/* Error indicator badge */}
+      {feature.error && (
+        <div
+          className={cn(
+            "absolute px-1.5 py-0.5 text-[10px] font-medium rounded flex items-center gap-1 z-10",
+            shortcutKey ? "top-2 left-10" : "top-2 left-2",
+            "bg-red-500/20 border border-red-500/50 text-red-400"
+          )}
+          data-testid={`error-badge-${feature.id}`}
+          title={feature.error}
+        >
+          <AlertCircle className="w-3 h-3" />
+          <span>Errored</span>
         </div>
       )}
       <CardHeader className="p-3 pb-2">
@@ -255,6 +273,28 @@ export function KanbanCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  data-testid={`edit-feature-${feature.id}`}
+                >
+                  <Edit className="w-3 h-3 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                {onViewOutput && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewOutput();
+                    }}
+                    data-testid={`view-logs-${feature.id}`}
+                  >
+                    <FileText className="w-3 h-3 mr-2" />
+                    Logs
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={(e) => {
@@ -565,55 +605,10 @@ export function KanbanCard({
                   Logs
                 </Button>
               )}
-              {/* Move back button for skipTests verified features */}
-              {feature.skipTests && onMoveBackToInProgress && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-yellow-500 hover:text-yellow-500 hover:bg-yellow-500/10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMoveBackToInProgress();
-                  }}
-                  data-testid={`move-back-${feature.id}`}
-                >
-                  <ArrowLeft className="w-3 h-3 mr-1" />
-                  Back
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                data-testid={`edit-feature-${feature.id}`}
-              >
-                <Edit className="w-3 h-3 mr-1" />
-                Edit
-              </Button>
             </>
           )}
           {!isCurrentAutoTask && feature.status === "waiting_approval" && (
             <>
-              {/* Logs button if context exists */}
-              {hasContext && onViewOutput && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onViewOutput();
-                  }}
-                  data-testid={`view-output-waiting-${feature.id}`}
-                >
-                  <FileText className="w-3 h-3 mr-1" />
-                  Logs
-                </Button>
-              )}
               {/* Follow-up prompt button */}
               {onFollowUp && (
                 <Button
@@ -665,19 +660,6 @@ export function KanbanCard({
                   Logs
                 </Button>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-1 h-7 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                data-testid={`edit-feature-${feature.id}`}
-              >
-                <Edit className="w-3 h-3 mr-1" />
-                Edit
-              </Button>
             </>
           )}
         </div>
