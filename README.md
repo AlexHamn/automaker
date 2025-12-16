@@ -14,6 +14,35 @@
 
 **Stop typing code. Start directing AI agents.**
 
+<details open>
+<summary><h2>Table of Contents</h2></summary>
+
+- [What Makes Automaker Different?](#what-makes-automaker-different)
+  - [The Workflow](#the-workflow)
+  - [Powered by Claude Code](#powered-by-claude-code)
+  - [Why This Matters](#why-this-matters)
+- [Security Disclaimer](#security-disclaimer)
+- [Community & Support](#community--support)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Quick Start](#quick-start)
+- [How to Run](#how-to-run)
+  - [Development Mode](#development-mode)
+    - [Electron Desktop App (Recommended)](#electron-desktop-app-recommended)
+    - [Web Browser Mode](#web-browser-mode)
+  - [Building for Production](#building-for-production)
+  - [Running Production Build](#running-production-build)
+  - [Testing](#testing)
+  - [Linting](#linting)
+  - [Authentication Options](#authentication-options)
+  - [Persistent Setup (Optional)](#persistent-setup-optional)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Learn More](#learn-more)
+- [License](#license)
+
+</details>
+
 Automaker is an autonomous AI development studio that transforms how you build software. Instead of manually writing every line of code, you describe features on a Kanban board and watch as AI agents powered by Claude Code automatically implement them.
 
 ![Automaker UI](https://i.imgur.com/jdwKydM.png)
@@ -54,6 +83,22 @@ The future of software development is **agentic coding**—where developers beco
 
 ---
 
+## Community & Support
+
+Join the **Agentic Jumpstart** to connect with other builders exploring **agentic coding** and autonomous development workflows.
+
+In the Discord, you can:
+- 💬 Discuss agentic coding patterns and best practices
+- 🧠 Share ideas for AI-driven development workflows
+- 🛠️ Get help setting up or extending Automaker
+- 🚀 Show off projects built with AI agents
+- 🤝 Collaborate with other developers and contributors
+
+👉 **Join the Discord:**  
+https://discord.gg/jjem7aEDKU
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -66,7 +111,7 @@ The future of software development is **agentic coding**—where developers beco
 
 ```bash
 # 1. Clone the repo
-git clone git@github.com:AutoMaker-Org/automaker.git
+git clone https://github.com/AutoMaker-Org/automaker.git
 cd automaker
 
 # 2. Install dependencies
