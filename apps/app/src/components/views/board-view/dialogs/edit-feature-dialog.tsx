@@ -19,13 +19,16 @@ import {
   FeatureImagePath as DescriptionImagePath,
   ImagePreviewMap,
 } from "@/components/ui/description-image-dropzone";
-import { MessageSquare, Settings2, FlaskConical, GitBranch } from "lucide-react";
+import { MessageSquare, Settings2, FlaskConical, Sparkles, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
+import { getElectronAPI } from "@/lib/electron";
 import { modelSupportsThinking } from "@/lib/utils";
 import {
   Feature,
   AgentModel,
   ThinkingLevel,
   AIProfile,
+  useAppStore,
 } from "@/store/app-store";
 import {
   ModelSelector,
@@ -34,7 +37,12 @@ import {
   TestingTabContent,
   PrioritySelector,
 } from "../shared";
-import { DependencyTreeDialog } from "./dependency-tree-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface EditFeatureDialogProps {
   feature: Feature | null;
@@ -73,7 +81,11 @@ export function EditFeatureDialog({
   const [editFeaturePreviewMap, setEditFeaturePreviewMap] =
     useState<ImagePreviewMap>(() => new Map());
   const [showEditAdvancedOptions, setShowEditAdvancedOptions] = useState(false);
-  const [showDependencyTree, setShowDependencyTree] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [enhancementMode, setEnhancementMode] = useState<'improve' | 'technical' | 'simplify' | 'acceptance'>('improve');
+
+  // Get enhancement model from store
+  const { enhancementModel } = useAppStore();
 
   useEffect(() => {
     setEditingFeature(feature);
@@ -134,6 +146,33 @@ export function EditFeatureDialog({
     });
   };
 
+  const handleEnhanceDescription = async () => {
+    if (!editingFeature?.description.trim() || isEnhancing) return;
+
+    setIsEnhancing(true);
+    try {
+      const api = getElectronAPI();
+      const result = await api.enhancePrompt?.enhance(
+        editingFeature.description,
+        enhancementMode,
+        enhancementModel
+      );
+
+      if (result?.success && result.enhancedText) {
+        const enhancedText = result.enhancedText;
+        setEditingFeature(prev => prev ? { ...prev, description: enhancedText } : prev);
+        toast.success("Description enhanced!");
+      } else {
+        toast.error(result?.error || "Failed to enhance description");
+      }
+    } catch (error) {
+      console.error("Enhancement failed:", error);
+      toast.error("Failed to enhance description");
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   const editModelAllowsThinking = modelSupportsThinking(editingFeature?.model);
 
   if (!editingFeature) {
@@ -182,7 +221,7 @@ export function EditFeatureDialog({
           </TabsList>
 
           {/* Prompt Tab */}
-          <TabsContent value="prompt" className="space-y-4 overflow-y-auto">
+          <TabsContent value="prompt" className="space-y-4 overflow-y-auto cursor-default">
             <div className="space-y-2">
               <Label htmlFor="edit-description">Description</Label>
               <DescriptionImageDropZone
@@ -205,6 +244,45 @@ export function EditFeatureDialog({
                 onPreviewMapChange={setEditFeaturePreviewMap}
                 data-testid="edit-feature-description"
               />
+            </div>
+            <div className="flex w-fit items-center gap-3 select-none cursor-default">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-[180px] justify-between">
+                    {enhancementMode === 'improve' && 'Improve Clarity'}
+                    {enhancementMode === 'technical' && 'Add Technical Details'}
+                    {enhancementMode === 'simplify' && 'Simplify'}
+                    {enhancementMode === 'acceptance' && 'Add Acceptance Criteria'}
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => setEnhancementMode('improve')}>
+                    Improve Clarity
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setEnhancementMode('technical')}>
+                    Add Technical Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setEnhancementMode('simplify')}>
+                    Simplify
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setEnhancementMode('acceptance')}>
+                    Add Acceptance Criteria
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleEnhanceDescription}
+                disabled={!editingFeature.description.trim() || isEnhancing}
+                loading={isEnhancing}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Enhance with AI
+              </Button>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-category">Category (optional)</Label>
@@ -236,7 +314,7 @@ export function EditFeatureDialog({
           </TabsContent>
 
           {/* Model Tab */}
-          <TabsContent value="model" className="space-y-4 overflow-y-auto">
+          <TabsContent value="model" className="space-y-4 overflow-y-auto cursor-default">
             {/* Show Advanced Options Toggle */}
             {showProfilesOnly && (
               <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
@@ -302,7 +380,7 @@ export function EditFeatureDialog({
           </TabsContent>
 
           {/* Testing Tab */}
-          <TabsContent value="testing" className="space-y-4 overflow-y-auto">
+          <TabsContent value="testing" className="space-y-4 overflow-y-auto cursor-default">
             <TestingTabContent
               skipTests={editingFeature.skipTests ?? false}
               onSkipTestsChange={(skipTests) =>

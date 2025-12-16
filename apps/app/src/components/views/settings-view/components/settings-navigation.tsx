@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/electron";
 import type { NavigationItem } from "../config/navigation";
+import type { SettingsViewId } from "../hooks/use-settings-view";
 
 interface SettingsNavigationProps {
   navItems: NavigationItem[];
-  activeSection: string;
+  activeSection: SettingsViewId;
   currentProject: Project | null;
-  onNavigate: (sectionId: string) => void;
+  onNavigate: (sectionId: SettingsViewId) => void;
 }
 
 export function SettingsNavigation({

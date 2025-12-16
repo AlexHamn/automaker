@@ -84,8 +84,8 @@ function formatThinkingLevel(level: ThinkingLevel | undefined): string {
   const labels: Record<ThinkingLevel, string> = {
     none: "",
     low: "Low",
-    medium: "Med",
-    high: "High",
+    medium: "Med", //
+    high: "High", //
     ultrathink: "Ultra",
   };
   return labels[level];
@@ -952,7 +952,7 @@ export const KanbanCard = memo(function KanbanCard({
               ) : null}
               {onViewOutput && !feature.skipTests && (
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   className="h-7 text-[11px] px-2"
                   onClick={(e) => {

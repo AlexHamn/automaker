@@ -58,6 +58,12 @@ type EventType =
 
 type EventCallback = (payload: unknown) => void;
 
+interface EnhancePromptResult {
+  success: boolean;
+  enhancedText?: string;
+  error?: string;
+}
+
 /**
  * HTTP API Client that implements ElectronAPI interface
  */
@@ -544,6 +550,20 @@ export class HttpApiClient implements ElectronAPI {
         callback as EventCallback
       );
     },
+  };
+
+  // Enhance Prompt API
+  enhancePrompt = {
+    enhance: (
+      originalText: string,
+      enhancementMode: string,
+      model?: string
+    ): Promise<EnhancePromptResult> =>
+      this.post("/api/enhance-prompt", {
+        originalText,
+        enhancementMode,
+        model,
+      }),
   };
 
   // Worktree API

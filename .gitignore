@@ -1,19 +1,79 @@
 #added by trueheads > will remove once supercombo adds multi-os support
 launch.sh
 
-# Claude Code settings
-.claude/settings.local.json
-
 # Dependencies
 node_modules/
 
 # Build outputs
 dist/
+build/
+out/
 .next/
+.turbo/
+
+# Automaker
 .automaker/images/
 .automaker/
 /.automaker/*
 /.automaker/
 
 /logs
-.claude/settings.local.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE/Editor configs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Editor backup/temp files
+*~
+*.bak
+*.backup
+*.orig
+*.swp
+*.swo
+*.tmp
+*.temp
+
+# Local settings (user-specific)
+*.local.json
+
+# Application state/backup
+backup.json
+
+# Test artifacts
+test-results/
+coverage/
+.nyc_output/
+*.lcov
+playwright-report/
+blob-report/
+
+# Environment files (keep .example)
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.local.example
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+*.pem

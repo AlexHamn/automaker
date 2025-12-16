@@ -316,6 +316,13 @@ export interface ElectronAPI {
   autoMode?: AutoModeAPI;
   features?: FeaturesAPI;
   runningAgents?: RunningAgentsAPI;
+  enhancePrompt?: {
+    enhance: (originalText: string, enhancementMode: string, model?: string) => Promise<{
+      success: boolean;
+      enhancedText?: string;
+      error?: string;
+    }>;
+  };
   setup?: {
     getClaudeStatus: () => Promise<{
       success: boolean;

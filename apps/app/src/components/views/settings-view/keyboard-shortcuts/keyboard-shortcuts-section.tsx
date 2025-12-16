@@ -11,9 +11,8 @@ export function KeyboardShortcutsSection({
 }: KeyboardShortcutsSectionProps) {
   return (
     <div
-      id="keyboard"
       className={cn(
-        "rounded-2xl overflow-hidden scroll-mt-6",
+        "rounded-2xl overflow-hidden",
         "border border-border/50",
         "bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl",
         "shadow-sm shadow-black/5"

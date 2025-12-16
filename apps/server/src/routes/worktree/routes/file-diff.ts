@@ -8,6 +8,7 @@ import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
 import { getErrorMessage, logError } from "../common.js";
+import { generateSyntheticDiffForNewFile } from "../../common.js";
 
 const execAsync = promisify(exec);
 
@@ -37,16 +38,34 @@ export function createFileDiffHandler() {
 
       try {
         await fs.access(worktreePath);
-        const { stdout: diff } = await execAsync(
-          `git diff HEAD -- "${filePath}"`,
-          {
-            cwd: worktreePath,
-            maxBuffer: 10 * 1024 * 1024,
-          }
+
+        // First check if the file is untracked
+        const { stdout: status } = await execAsync(
+          `git status --porcelain -- "${filePath}"`,
+          { cwd: worktreePath }
         );
 
+        const isUntracked = status.trim().startsWith("??");
+
+        let diff: string;
+        if (isUntracked) {
+          // Generate synthetic diff for untracked file
+          diff = await generateSyntheticDiffForNewFile(worktreePath, filePath);
+        } else {
+          // Use regular git diff for tracked files
+          const result = await execAsync(
+            `git diff HEAD -- "${filePath}"`,
+            {
+              cwd: worktreePath,
+              maxBuffer: 10 * 1024 * 1024,
+            }
+          );
+          diff = result.stdout;
+        }
+
         res.json({ success: true, diff, filePath });
-      } catch {
+      } catch (innerError) {
+        logError(innerError, "Worktree file diff failed");
         res.json({ success: true, diff: "", filePath });
       }
     } catch (error) {

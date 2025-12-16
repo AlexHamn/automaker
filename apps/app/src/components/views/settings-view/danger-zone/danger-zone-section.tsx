@@ -16,9 +16,8 @@ export function DangerZoneSection({
 
   return (
     <div
-      id="danger"
       className={cn(
-        "rounded-2xl overflow-hidden scroll-mt-6",
+        "rounded-2xl overflow-hidden",
         "border border-destructive/30",
         "bg-gradient-to-br from-destructive/5 via-card/70 to-card/80 backdrop-blur-xl",
         "shadow-sm shadow-destructive/5"

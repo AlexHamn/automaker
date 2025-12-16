@@ -3,13 +3,10 @@
  */
 
 import type { Request, Response } from "express";
-import { exec } from "child_process";
-import { promisify } from "util";
 import path from "path";
 import fs from "fs/promises";
 import { getErrorMessage, logError } from "../common.js";
-
-const execAsync = promisify(exec);
+import { getGitRepositoryDiffs } from "../../common.js";
 
 export function createDiffsHandler() {
   return async (req: Request, res: Response): Promise<void> => {
@@ -37,45 +34,33 @@ export function createDiffsHandler() {
       );
 
       try {
+        // Check if worktree exists
         await fs.access(worktreePath);
-        const { stdout: diff } = await execAsync("git diff HEAD", {
-          cwd: worktreePath,
-          maxBuffer: 10 * 1024 * 1024,
-        });
-        const { stdout: status } = await execAsync("git status --porcelain", {
-          cwd: worktreePath,
-        });
 
-        const files = status
-          .split("\n")
-          .filter(Boolean)
-          .map((line) => {
-            const statusChar = line[0];
-            const filePath = line.slice(3);
-            const statusMap: Record<string, string> = {
-              M: "Modified",
-              A: "Added",
-              D: "Deleted",
-              R: "Renamed",
-              C: "Copied",
-              U: "Updated",
-              "?": "Untracked",
-            };
-            return {
-              status: statusChar,
-              path: filePath,
-              statusText: statusMap[statusChar] || "Unknown",
-            };
-          });
-
+        // Get diffs from worktree
+        const result = await getGitRepositoryDiffs(worktreePath);
         res.json({
           success: true,
-          diff,
-          files,
-          hasChanges: files.length > 0,
+          diff: result.diff,
+          files: result.files,
+          hasChanges: result.hasChanges,
         });
-      } catch {
-        res.json({ success: true, diff: "", files: [], hasChanges: false });
+      } catch (innerError) {
+        // Worktree doesn't exist - fallback to main project path
+        logError(innerError, "Worktree access failed, falling back to main project");
+
+        try {
+          const result = await getGitRepositoryDiffs(projectPath);
+          res.json({
+            success: true,
+            diff: result.diff,
+            files: result.files,
+            hasChanges: result.hasChanges,
+          });
+        } catch (fallbackError) {
+          logError(fallbackError, "Fallback to main project also failed");
+          res.json({ success: true, diff: "", files: [], hasChanges: false });
+        }
       }
     } catch (error) {
       logError(error, "Get worktree diffs failed");

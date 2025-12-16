@@ -620,6 +620,41 @@ export function GitDiffPanel({
                     onToggle={() => toggleFile(fileDiff.filePath)}
                   />
                 ))}
+                {/* Fallback for files that have no diff content (shouldn't happen after fix, but safety net) */}
+                {files.length > 0 && parsedDiffs.length === 0 && (
+                  <div className="space-y-2">
+                    {files.map((file) => (
+                      <div
+                        key={file.path}
+                        className="border border-border rounded-lg overflow-hidden"
+                      >
+                        <div className="w-full px-3 py-2 flex items-center gap-2 text-left bg-card">
+                          {getFileIcon(file.status)}
+                          <span className="flex-1 text-sm font-mono truncate text-foreground">
+                            {file.path}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-xs px-1.5 py-0.5 rounded border font-medium",
+                              getStatusBadgeColor(file.status)
+                            )}
+                          >
+                            {getStatusDisplayName(file.status)}
+                          </span>
+                        </div>
+                        <div className="px-4 py-3 text-sm text-muted-foreground bg-background border-t border-border">
+                          {file.status === "?" ? (
+                            <span>New file - content preview not available</span>
+                          ) : file.status === "D" ? (
+                            <span>File deleted</span>
+                          ) : (
+                            <span>Diff content not available</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

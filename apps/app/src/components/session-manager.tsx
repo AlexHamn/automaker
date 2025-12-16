@@ -27,6 +27,7 @@ import type { SessionListItem } from "@/types/electron";
 import { useKeyboardShortcutsConfig } from "@/hooks/use-keyboard-shortcuts";
 import { getElectronAPI } from "@/lib/electron";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
+import { DeleteAllArchivedSessionsDialog } from "@/components/delete-all-archived-sessions-dialog";
 
 // Random session name generator
 const adjectives = [
@@ -116,6 +117,7 @@ export function SessionManager({
   );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<SessionListItem | null>(null);
+  const [isDeleteAllArchivedDialogOpen, setIsDeleteAllArchivedDialogOpen] = useState(false);
 
   // Check running state for all sessions
   const checkRunningSessions = async (sessionList: SessionListItem[]) => {
@@ -314,6 +316,20 @@ export function SessionManager({
     setSessionToDelete(null);
   };
 
+  // Delete all archived sessions
+  const handleDeleteAllArchivedSessions = async () => {
+    const api = getElectronAPI();
+    if (!api?.sessions) return;
+
+    // Delete each archived session
+    for (const session of archivedSessions) {
+      await api.sessions.delete(session.id);
+    }
+
+    await loadSessions();
+    setIsDeleteAllArchivedDialogOpen(false);
+  };
+
   const activeSessions = sessions.filter((s) => !s.isArchived);
   const archivedSessions = sessions.filter((s) => s.isArchived);
   const displayedSessions =
@@ -399,6 +415,22 @@ export function SessionManager({
                 <X className="w-4 h-4" />
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Delete All Archived button - shown at the top of archived sessions */}
+        {activeTab === "archived" && archivedSessions.length > 0 && (
+          <div className="pb-2 border-b mb-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-full"
+              onClick={() => setIsDeleteAllArchivedDialogOpen(true)}
+              data-testid="delete-all-archived-sessions-button"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete All Archived Sessions
+            </Button>
           </div>
         )}
 
@@ -573,6 +605,14 @@ export function SessionManager({
         onOpenChange={setIsDeleteDialogOpen}
         session={sessionToDelete}
         onConfirm={confirmDeleteSession}
+      />
+
+      {/* Delete All Archived Sessions Confirmation Dialog */}
+      <DeleteAllArchivedSessionsDialog
+        open={isDeleteAllArchivedDialogOpen}
+        onOpenChange={setIsDeleteAllArchivedDialogOpen}
+        archivedCount={archivedSessions.length}
+        onConfirm={handleDeleteAllArchivedSessions}
       />
     </Card>
   );
