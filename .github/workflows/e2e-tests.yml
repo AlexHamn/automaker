@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-        working-directory: apps/app
+        working-directory: apps/ui
 
       - name: Build server
         run: npm run build --workspace=apps/server
@@ -71,20 +71,20 @@ jobs:
           exit 1
 
       - name: Run E2E tests
-        # Playwright automatically starts the Next.js frontend via webServer config
-        # (see apps/app/playwright.config.ts) - no need to start it manually
-        run: npm run test --workspace=apps/app
+        # Playwright automatically starts the Vite frontend via webServer config
+        # (see apps/ui/playwright.config.ts) - no need to start it manually
+        run: npm run test --workspace=apps/ui
         env:
           CI: true
-          NEXT_PUBLIC_SERVER_URL: http://localhost:3008
-          NEXT_PUBLIC_SKIP_SETUP: "true"
+          VITE_SERVER_URL: http://localhost:3008
+          VITE_SKIP_SETUP: "true"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
-          path: apps/app/playwright-report/
+          path: apps/ui/playwright-report/
           retention-days: 7
 
       - name: Upload test results
@@ -92,5 +92,5 @@ jobs:
         if: failure()
         with:
           name: test-results
-          path: apps/app/test-results/
+          path: apps/ui/test-results/
           retention-days: 7
