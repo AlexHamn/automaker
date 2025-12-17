@@ -130,9 +130,16 @@ function getCurrentPhase(content: string): "planning" | "action" | "verification
 
 /**
  * Extracts a summary from completed feature context
+ * Looks for content between <summary> and </summary> tags
  */
 function extractSummary(content: string): string | undefined {
-  // Look for summary sections - capture everything including subsections (###)
+  // Look for <summary> tags - capture everything between opening and closing tags
+  const summaryTagMatch = content.match(/<summary>([\s\S]*?)<\/summary>/i);
+  if (summaryTagMatch) {
+    return summaryTagMatch[1].trim();
+  }
+
+  // Fallback: Look for summary sections - capture everything including subsections (###)
   // Stop at same-level ## sections (but not ###), or tool markers, or end
   const summaryMatch = content.match(/## Summary[^\n]*\n([\s\S]*?)(?=\n## [^#]|\n🔧|$)/i);
   if (summaryMatch) {
