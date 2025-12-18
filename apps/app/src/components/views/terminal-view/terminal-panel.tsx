@@ -72,10 +72,19 @@ export function TerminalPanel({
   const [shellName, setShellName] = useState("shell");
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [isMac, setIsMac] = useState(false);
+  const isMacRef = useRef(false);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const [focusedMenuIndex, setFocusedMenuIndex] = useState(0);
 
   // Detect platform on mount
   useEffect(() => {
-    setIsMac(navigator.platform.toUpperCase().indexOf("MAC") >= 0);
+    // Use modern userAgentData API with fallback to deprecated navigator.platform
+    const detected = (navigator as Navigator & { userAgentData?: { platform: string } })
+      .userAgentData?.platform?.toLowerCase().includes("mac")
+      ?? navigator.platform?.toLowerCase().includes("mac")
+      ?? false;
+    setIsMac(detected);
+    isMacRef.current = detected;
   }, []);
 
   // Get effective theme from store
@@ -345,9 +354,8 @@ export function TerminalPanel({
           return false;
         }
 
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const modKey = isMac ? event.metaKey : event.ctrlKey;
-        const otherModKey = isMac ? event.ctrlKey : event.metaKey;
+        const modKey = isMacRef.current ? event.metaKey : event.ctrlKey;
+        const otherModKey = isMacRef.current ? event.ctrlKey : event.metaKey;
 
         // Ctrl+Shift+C / Cmd+Shift+C - Always copy (Linux terminal convention)
         if (modKey && !otherModKey && event.shiftKey && !event.altKey && code === 'KeyC') {
@@ -668,14 +676,46 @@ export function TerminalPanel({
     return () => container.removeEventListener("wheel", handleWheel);
   }, [zoomIn, zoomOut]);
 
-  // Close context menu on click outside or scroll
+  // Context menu actions for keyboard navigation
+  const menuActions = ["copy", "paste", "selectAll", "clear"] as const;
+
+  // Close context menu on click outside or scroll, handle keyboard navigation
   useEffect(() => {
     if (!contextMenu) return;
+
+    // Reset focus index and focus menu when opened
+    setFocusedMenuIndex(0);
+    requestAnimationFrame(() => {
+      const firstButton = contextMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]');
+      firstButton?.focus();
+    });
 
     const handleClick = () => closeContextMenu();
     const handleScroll = () => closeContextMenu();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeContextMenu();
+      switch (e.key) {
+        case "Escape":
+          e.preventDefault();
+          closeContextMenu();
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedMenuIndex((prev) => (prev + 1) % menuActions.length);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedMenuIndex((prev) => (prev - 1 + menuActions.length) % menuActions.length);
+          break;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          handleContextMenuAction(menuActions[focusedMenuIndex]);
+          break;
+        case "Tab":
+          e.preventDefault();
+          closeContextMenu();
+          break;
+      }
     };
 
     document.addEventListener("click", handleClick);
@@ -687,7 +727,14 @@ export function TerminalPanel({
       document.removeEventListener("scroll", handleScroll, true);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [contextMenu, closeContextMenu]);
+  }, [contextMenu, closeContextMenu, focusedMenuIndex, handleContextMenuAction]);
+
+  // Focus the correct menu item when navigation changes
+  useEffect(() => {
+    if (!contextMenu || !contextMenuRef.current) return;
+    const buttons = contextMenuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+    buttons[focusedMenuIndex]?.focus();
+  }, [focusedMenuIndex, contextMenu]);
 
   // Handle right-click context menu
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -849,12 +896,20 @@ export function TerminalPanel({
       {/* Context menu */}
       {contextMenu && (
         <div
+          ref={contextMenuRef}
+          role="menu"
+          aria-label="Terminal context menu"
           className="fixed z-50 min-w-[160px] rounded-md border border-border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground cursor-default"
+            role="menuitem"
+            tabIndex={focusedMenuIndex === 0 ? 0 : -1}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground cursor-default outline-none",
+              focusedMenuIndex === 0 ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"
+            )}
             onClick={() => handleContextMenuAction("copy")}
           >
             <Copy className="h-4 w-4" />
@@ -862,16 +917,26 @@ export function TerminalPanel({
             <span className="text-xs text-muted-foreground">{isMac ? "⌘C" : "Ctrl+C"}</span>
           </button>
           <button
-            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground cursor-default"
+            role="menuitem"
+            tabIndex={focusedMenuIndex === 1 ? 0 : -1}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground cursor-default outline-none",
+              focusedMenuIndex === 1 ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"
+            )}
             onClick={() => handleContextMenuAction("paste")}
           >
             <ClipboardPaste className="h-4 w-4" />
             <span className="flex-1 text-left">Paste</span>
             <span className="text-xs text-muted-foreground">{isMac ? "⌘V" : "Ctrl+V"}</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div role="separator" className="my-1 h-px bg-border" />
           <button
-            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground cursor-default"
+            role="menuitem"
+            tabIndex={focusedMenuIndex === 2 ? 0 : -1}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground cursor-default outline-none",
+              focusedMenuIndex === 2 ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"
+            )}
             onClick={() => handleContextMenuAction("selectAll")}
           >
             <CheckSquare className="h-4 w-4" />
@@ -879,7 +944,12 @@ export function TerminalPanel({
             <span className="text-xs text-muted-foreground">{isMac ? "⌘A" : "Ctrl+A"}</span>
           </button>
           <button
-            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground cursor-default"
+            role="menuitem"
+            tabIndex={focusedMenuIndex === 3 ? 0 : -1}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground cursor-default outline-none",
+              focusedMenuIndex === 3 ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"
+            )}
             onClick={() => handleContextMenuAction("clear")}
           >
             <Trash2 className="h-4 w-4" />
