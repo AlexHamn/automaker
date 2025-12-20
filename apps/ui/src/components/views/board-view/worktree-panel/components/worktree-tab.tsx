@@ -91,21 +91,6 @@ export function WorktreeTab({
   onStopDevServer,
   onOpenDevServerUrl,
 }: WorktreeTabProps) {
-  // Determine border color based on state:
-  // - Running features: cyan border (high visibility, indicates active work)
-  // - Uncommitted changes: amber border (warning state, needs attention)
-  // - Both: cyan takes priority (running is more important to see)
-  const getBorderClasses = () => {
-    if (isRunning) {
-      return "ring-2 ring-cyan-500 ring-offset-1 ring-offset-background";
-    }
-    if (hasChanges) {
-      return "ring-2 ring-amber-500 ring-offset-1 ring-offset-background";
-    }
-    return "";
-  };
-
-  const borderClasses = getBorderClasses();
 
   let prBadge: JSX.Element | null = null;
   if (worktree.pr) {
@@ -197,7 +182,7 @@ export function WorktreeTab({
   }
 
   return (
-    <div className={cn("flex items-center rounded-md", borderClasses)}>
+    <div className="flex items-center rounded-md">
       {worktree.isMain ? (
         <>
           <Button

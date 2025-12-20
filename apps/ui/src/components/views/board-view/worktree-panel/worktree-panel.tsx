@@ -1,6 +1,6 @@
-
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { GitBranch, Plus, RefreshCw } from "lucide-react";
+import { GitBranch, Plus, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { cn, pathsEqual } from "@/lib/utils";
 import type { WorktreePanelProps, WorktreeInfo } from "./types";
 import {
@@ -12,6 +12,8 @@ import {
   useRunningFeatures,
 } from "./hooks";
 import { WorktreeTab } from "./components";
+
+const WORKTREE_PANEL_COLLAPSED_KEY = "worktree-panel-collapsed";
 
 export function WorktreePanel({
   projectPath,
@@ -81,6 +83,27 @@ export function WorktreePanel({
     features,
   });
 
+  // Collapse state with localStorage persistence
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem(WORKTREE_PANEL_COLLAPSED_KEY);
+    return saved === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(WORKTREE_PANEL_COLLAPSED_KEY, String(isCollapsed));
+  }, [isCollapsed]);
+
+  const toggleCollapsed = () => setIsCollapsed((prev) => !prev);
+
+  // Get the currently selected worktree for collapsed view
+  const selectedWorktree = worktrees.find((w) => {
+    if (currentWorktree === null || currentWorktree === undefined || currentWorktree.path === null) {
+      return w.isMain;
+    }
+    return pathsEqual(w.path, currentWorktreePath);
+  });
+
   const isWorktreeSelected = (worktree: WorktreeInfo) => {
     return worktree.isMain
       ? currentWorktree === null ||
@@ -106,8 +129,45 @@ export function WorktreePanel({
     return null;
   }
 
+  // Collapsed view - just show current branch and toggle
+  if (isCollapsed) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-glass/50 backdrop-blur-sm">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+          onClick={toggleCollapsed}
+          title="Expand worktree panel"
+        >
+          <ChevronDown className="w-4 h-4" />
+        </Button>
+        <GitBranch className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Branch:</span>
+        <span className="text-sm font-mono font-medium">
+          {selectedWorktree?.branch ?? "main"}
+        </span>
+        {selectedWorktree?.hasChanges && (
+          <span className="inline-flex items-center justify-center h-4 min-w-[1rem] px-1 text-[10px] font-medium rounded border bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30">
+            {selectedWorktree.changedFilesCount ?? "!"}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // Expanded view - full worktree panel
   return (
     <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-glass/50 backdrop-blur-sm">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+        onClick={toggleCollapsed}
+        title="Collapse worktree panel"
+      >
+        <ChevronUp className="w-4 h-4" />
+      </Button>
       <GitBranch className="w-4 h-4 text-muted-foreground" />
       <span className="text-sm text-muted-foreground mr-2">Branch:</span>
 
