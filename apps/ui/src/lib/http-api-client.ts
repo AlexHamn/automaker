@@ -1630,3 +1630,10 @@ export function getHttpApiClient(): HttpApiClient {
   }
   return httpApiClientInstance;
 }
+
+// Start API key initialization immediately when this module is imported
+// This ensures the init promise is created early, even before React components mount
+// The actual async work happens in the background and won't block module loading
+initApiKey().catch((error) => {
+  console.error('[HTTP Client] Failed to initialize API key:', error);
+});
