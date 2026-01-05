@@ -42,7 +42,7 @@
     "lint": "npm run lint --workspace=apps/ui",
     "test": "npm run test --workspace=apps/ui",
     "test:headed": "npm run test:headed --workspace=apps/ui",
-    "test:packages": "vitest run --project=utils --project=platform --project=prompts --project=model-resolver --project=dependency-resolver --project=git-utils",
+    "test:packages": "vitest run --project='!server'",
     "test:server": "vitest run --project=server",
     "test:server:coverage": "vitest run --project=server --coverage",
     "test:unit": "vitest run",
