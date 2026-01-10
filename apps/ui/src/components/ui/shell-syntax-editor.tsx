@@ -13,6 +13,7 @@ interface ShellSyntaxEditorProps {
   placeholder?: string;
   className?: string;
   minHeight?: string;
+  maxHeight?: string;
   'data-testid'?: string;
 }
 
@@ -108,14 +109,12 @@ export function ShellSyntaxEditor({
   placeholder,
   className,
   minHeight = '200px',
+  maxHeight,
   'data-testid': testId,
 }: ShellSyntaxEditorProps) {
   return (
     <div
-      className={cn(
-        'w-full rounded-lg border border-border bg-muted/30 overflow-hidden',
-        className
-      )}
+      className={cn('w-full rounded-lg border border-border bg-muted/30', className)}
       style={{ minHeight }}
       data-testid={testId}
     >
@@ -125,7 +124,9 @@ export function ShellSyntaxEditor({
         extensions={extensions}
         theme="none"
         placeholder={placeholder}
-        className="h-full [&_.cm-editor]:h-full [&_.cm-editor]:min-h-[inherit]"
+        height={maxHeight}
+        minHeight={minHeight}
+        className="[&_.cm-editor]:min-h-[inherit]"
         basicSetup={{
           lineNumbers: true,
           foldGutter: false,

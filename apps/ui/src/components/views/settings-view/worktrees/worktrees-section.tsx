@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 import { ShellSyntaxEditor } from '@/components/ui/shell-syntax-editor';
-import { GitBranch, Terminal, FileCode, Check, Loader2 } from 'lucide-react';
+import { GitBranch, Terminal, FileCode, Save, RotateCcw, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { apiPost, apiPut } from '@/lib/api-fetch';
+import { apiPost, apiPut, apiDelete } from '@/lib/api-fetch';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
 
@@ -24,18 +25,21 @@ interface InitScriptResponse {
 export function WorktreesSection({ useWorktrees, onUseWorktreesChange }: WorktreesSectionProps) {
   const currentProject = useAppStore((s) => s.currentProject);
   const [scriptContent, setScriptContent] = useState('');
-  const [scriptPath, setScriptPath] = useState('');
+  const [originalContent, setOriginalContent] = useState('');
+  const [scriptExists, setScriptExists] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [showSaved, setShowSaved] = useState(false);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Check if there are unsaved changes
+  const hasChanges = scriptContent !== originalContent;
 
   // Load init script content when project changes
   useEffect(() => {
     if (!currentProject?.path) {
       setScriptContent('');
-      setScriptPath('');
+      setOriginalContent('');
+      setScriptExists(false);
       setIsLoading(false);
       return;
     }
@@ -47,8 +51,10 @@ export function WorktreesSection({ useWorktrees, onUseWorktreesChange }: Worktre
           projectPath: currentProject.path,
         });
         if (response.success) {
-          setScriptContent(response.content || '');
-          setScriptPath(response.path || '');
+          const content = response.content || '';
+          setScriptContent(content);
+          setOriginalContent(content);
+          setScriptExists(response.exists);
         }
       } catch (error) {
         console.error('Failed to load init script:', error);
@@ -60,66 +66,74 @@ export function WorktreesSection({ useWorktrees, onUseWorktreesChange }: Worktre
     loadInitScript();
   }, [currentProject?.path]);
 
-  // Debounced save function
-  const saveScript = useCallback(
-    async (content: string) => {
-      if (!currentProject?.path) return;
+  // Save script
+  const handleSave = useCallback(async () => {
+    if (!currentProject?.path) return;
 
-      setIsSaving(true);
-      try {
-        const response = await apiPut<{ success: boolean; error?: string }>(
-          '/api/worktree/init-script',
-          {
-            projectPath: currentProject.path,
-            content,
-          }
-        );
-        if (response.success) {
-          setShowSaved(true);
-          savedTimeoutRef.current = setTimeout(() => setShowSaved(false), 2000);
-        } else {
-          toast.error('Failed to save init script', {
-            description: response.error,
-          });
+    setIsSaving(true);
+    try {
+      const response = await apiPut<{ success: boolean; error?: string }>(
+        '/api/worktree/init-script',
+        {
+          projectPath: currentProject.path,
+          content: scriptContent,
         }
-      } catch (error) {
-        console.error('Failed to save init script:', error);
-        toast.error('Failed to save init script');
-      } finally {
-        setIsSaving(false);
+      );
+      if (response.success) {
+        setOriginalContent(scriptContent);
+        setScriptExists(true);
+        toast.success('Init script saved');
+      } else {
+        toast.error('Failed to save init script', {
+          description: response.error,
+        });
       }
-    },
-    [currentProject?.path]
-  );
+    } catch (error) {
+      console.error('Failed to save init script:', error);
+      toast.error('Failed to save init script');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentProject?.path, scriptContent]);
 
-  // Handle content change with debounce
-  const handleContentChange = useCallback(
-    (value: string) => {
-      setScriptContent(value);
-      setShowSaved(false);
+  // Reset to original content
+  const handleReset = useCallback(() => {
+    setScriptContent(originalContent);
+  }, [originalContent]);
 
-      // Clear existing timeouts
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+  // Delete script
+  const handleDelete = useCallback(async () => {
+    if (!currentProject?.path) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await apiDelete<{ success: boolean; error?: string }>(
+        '/api/worktree/init-script',
+        {
+          body: { projectPath: currentProject.path },
+        }
+      );
+      if (response.success) {
+        setScriptContent('');
+        setOriginalContent('');
+        setScriptExists(false);
+        toast.success('Init script deleted');
+      } else {
+        toast.error('Failed to delete init script', {
+          description: response.error,
+        });
       }
-      if (savedTimeoutRef.current) {
-        clearTimeout(savedTimeoutRef.current);
-      }
+    } catch (error) {
+      console.error('Failed to delete init script:', error);
+      toast.error('Failed to delete init script');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [currentProject?.path]);
 
-      // Debounce save
-      saveTimeoutRef.current = setTimeout(() => {
-        saveScript(value);
-      }, 1000);
-    },
-    [saveScript]
-  );
-
-  // Cleanup timeouts
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
-    };
+  // Handle content change (no auto-save)
+  const handleContentChange = useCallback((value: string) => {
+    setScriptContent(value);
   }, []);
 
   return (
@@ -177,24 +191,10 @@ export function WorktreesSection({ useWorktrees, onUseWorktreesChange }: Worktre
               <Terminal className="w-4 h-4 text-brand-500" />
               <Label className="text-foreground font-medium">Initialization Script</Label>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {isSaving && (
-                <span className="flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Saving...
-                </span>
-              )}
-              {showSaved && !isSaving && (
-                <span className="flex items-center gap-1 text-green-500">
-                  <Check className="w-3 h-3" />
-                  Saved
-                </span>
-              )}
-            </div>
           </div>
           <p className="text-xs text-muted-foreground/80 leading-relaxed">
-            Shell commands to run after a worktree is created. Runs once per worktree. Uses Git
-            Bash on Windows for cross-platform compatibility.
+            Shell commands to run after a worktree is created. Runs once per worktree. Uses Git Bash
+            on Windows for cross-platform compatibility.
           </p>
 
           {currentProject ? (
@@ -203,6 +203,9 @@ export function WorktreesSection({ useWorktrees, onUseWorktreesChange }: Worktre
               <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
                 <FileCode className="w-3.5 h-3.5" />
                 <code className="font-mono">.automaker/worktree-init.sh</code>
+                {hasChanges && (
+                  <span className="text-amber-500 font-medium">(unsaved changes)</span>
+                )}
               </div>
 
               {isLoading ? (
@@ -210,10 +213,11 @@ export function WorktreesSection({ useWorktrees, onUseWorktreesChange }: Worktre
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <ShellSyntaxEditor
-                  value={scriptContent}
-                  onChange={handleContentChange}
-                  placeholder={`# Example initialization commands
+                <>
+                  <ShellSyntaxEditor
+                    value={scriptContent}
+                    onChange={handleContentChange}
+                    placeholder={`# Example initialization commands
 npm install
 
 # Or use pnpm
@@ -221,9 +225,52 @@ npm install
 
 # Copy environment file
 # cp .env.example .env`}
-                  minHeight="200px"
-                  data-testid="init-script-editor"
-                />
+                    minHeight="200px"
+                    maxHeight="500px"
+                    data-testid="init-script-editor"
+                  />
+
+                  {/* Action buttons */}
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReset}
+                      disabled={!hasChanges || isSaving || isDeleting}
+                      className="gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Reset
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDelete}
+                      disabled={!scriptExists || isSaving || isDeleting}
+                      className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      Delete
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={!hasChanges || isSaving || isDeleting}
+                      className="gap-1.5"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                </>
               )}
             </>
           ) : (
