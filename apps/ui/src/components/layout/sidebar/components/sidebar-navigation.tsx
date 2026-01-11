@@ -35,7 +35,7 @@ export function SidebarNavigation({
           <div key={sectionIdx} className={sectionIdx > 0 && sidebarOpen ? 'mt-6' : ''}>
             {/* Section Label */}
             {section.label && sidebarOpen && (
-              <div className="hidden lg:block px-3 mb-2">
+              <div className="px-3 mb-2">
                 <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">
                   {section.label}
                 </span>
@@ -115,7 +115,7 @@ export function SidebarNavigation({
                     <span
                       className={cn(
                         'ml-3 font-medium text-sm flex-1 text-left',
-                        sidebarOpen ? 'hidden lg:block' : 'hidden'
+                        sidebarOpen ? 'block' : 'hidden'
                       )}
                     >
                       {item.label}
@@ -124,7 +124,7 @@ export function SidebarNavigation({
                     {item.count !== undefined && item.count > 0 && sidebarOpen && (
                       <span
                         className={cn(
-                          'hidden lg:flex items-center justify-center',
+                          'flex items-center justify-center',
                           'min-w-5 h-5 px-1.5 text-[10px] font-bold rounded-full',
                           'bg-primary text-primary-foreground shadow-sm',
                           'animate-in fade-in zoom-in duration-200'
@@ -137,7 +137,7 @@ export function SidebarNavigation({
                     {item.shortcut && sidebarOpen && !item.count && (
                       <span
                         className={cn(
-                          'hidden lg:flex items-center justify-center min-w-5 h-5 px-1.5 text-[10px] font-mono rounded-md transition-all duration-200',
+                          'hidden sm:flex items-center justify-center min-w-5 h-5 px-1.5 text-[10px] font-mono rounded-md transition-all duration-200',
                           isActive
                             ? 'bg-brand-500/20 text-brand-400'
                             : 'bg-muted text-muted-foreground group-hover:bg-accent'

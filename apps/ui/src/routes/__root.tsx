@@ -27,6 +27,7 @@ import {
   performSettingsMigration,
 } from '@/hooks/use-settings-migration';
 import { Toaster } from 'sonner';
+import { Menu } from 'lucide-react';
 import { ThemeOption, themeOptions } from '@/config/theme-options';
 import { SandboxRiskDialog } from '@/components/dialogs/sandbox-risk-dialog';
 import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
@@ -159,6 +160,8 @@ function RootLayoutContent() {
     skipSandboxWarning,
     setSkipSandboxWarning,
     fetchCodexModels,
+    sidebarOpen,
+    toggleSidebar,
   } = useAppStore();
   const { setupComplete, codexCliStatus } = useSetupStore();
   const navigate = useNavigate();
@@ -811,6 +814,16 @@ function RootLayoutContent() {
           />
         )}
         <Sidebar />
+        {/* Mobile menu toggle button - only shows when sidebar is closed on mobile */}
+        {!sidebarOpen && (
+          <button
+            onClick={toggleSidebar}
+            className="fixed top-3 left-3 z-50 p-2 rounded-lg bg-card/90 backdrop-blur-sm border border-border shadow-lg lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5 text-foreground" />
+          </button>
+        )}
         <div
           className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
           style={{ marginRight: streamerPanelOpen ? '250px' : '0' }}

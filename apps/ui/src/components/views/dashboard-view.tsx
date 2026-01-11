@@ -472,9 +472,9 @@ export function DashboardView() {
             aria-hidden="true"
           />
         )}
-        <div className="px-8 py-4 flex items-center justify-between">
+        <div className="px-4 sm:px-8 py-4 flex items-center justify-between">
           <div
-            className="flex items-center gap-3 cursor-pointer group titlebar-no-drag"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer group titlebar-no-drag"
             onClick={() => navigate({ to: '/dashboard' })}
           >
             <svg
@@ -482,7 +482,7 @@ export function DashboardView() {
               viewBox="0 0 256 256"
               role="img"
               aria-label="Automaker Logo"
-              className="size-10 group-hover:rotate-12 transition-transform duration-300 ease-out"
+              className="size-8 sm:size-10 group-hover:rotate-12 transition-transform duration-300 ease-out"
             >
               <defs>
                 <linearGradient
@@ -521,7 +521,7 @@ export function DashboardView() {
               </g>
             </svg>
             <div className="flex flex-col">
-              <span className="font-bold text-foreground text-2xl tracking-tight leading-none">
+              <span className="font-bold text-foreground text-xl sm:text-2xl tracking-tight leading-none">
                 automaker<span className="text-brand-500">.</span>
               </span>
               <span className="text-xs text-muted-foreground leading-none font-medium mt-1">
@@ -541,30 +541,32 @@ export function DashboardView() {
       </header>
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <div className="max-w-6xl mx-auto">
           {/* No projects - show getting started */}
           {!hasProjects && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold text-foreground mb-3">Welcome to Automaker</h2>
-                <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+              <div className="text-center mb-8 sm:mb-12">
+                <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
+                  Welcome to Automaker
+                </h2>
+                <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto px-2">
                   Your autonomous AI development studio. Get started by creating a new project or
                   opening an existing one.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-3xl mx-auto">
                 {/* New Project Card */}
                 <div
                   className="group relative rounded-xl border border-border bg-card/80 backdrop-blur-sm hover:bg-card hover:border-brand-500/30 hover:shadow-xl hover:shadow-brand-500/5 transition-all duration-300 hover:-translate-y-1"
                   data-testid="new-project-card"
                 >
                   <div className="absolute inset-0 rounded-xl bg-linear-to-br from-brand-500/5 via-transparent to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative p-6 h-full flex flex-col">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-12 h-12 rounded-xl bg-linear-to-br from-brand-500 to-brand-600 shadow-lg shadow-brand-500/25 flex items-center justify-center group-hover:scale-105 group-hover:shadow-brand-500/40 transition-all duration-300 shrink-0">
-                        <Plus className="w-6 h-6 text-white" />
+                  <div className="relative p-4 sm:p-6 h-full flex flex-col">
+                    <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-linear-to-br from-brand-500 to-brand-600 shadow-lg shadow-brand-500/25 flex items-center justify-center group-hover:scale-105 group-hover:shadow-brand-500/40 transition-all duration-300 shrink-0">
+                        <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-foreground mb-1.5">
@@ -578,7 +580,7 @@ export function DashboardView() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
-                          className="w-full mt-5 bg-linear-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white border-0 shadow-md shadow-brand-500/20 hover:shadow-brand-500/30 transition-all"
+                          className="w-full mt-4 sm:mt-5 bg-linear-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white border-0 shadow-md shadow-brand-500/20 hover:shadow-brand-500/30 transition-all"
                           data-testid="create-new-project"
                         >
                           <Plus className="w-4 h-4 mr-2" />
@@ -613,10 +615,10 @@ export function DashboardView() {
                   data-testid="open-project-card"
                 >
                   <div className="absolute inset-0 rounded-xl bg-linear-to-br from-blue-500/5 via-transparent to-cyan-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="relative p-6 h-full flex flex-col">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:scale-105 transition-all duration-300 shrink-0">
-                        <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-blue-500 transition-colors duration-300" />
+                  <div className="relative p-4 sm:p-6 h-full flex flex-col">
+                    <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-muted border border-border flex items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:scale-105 transition-all duration-300 shrink-0">
+                        <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground group-hover:text-blue-500 transition-colors duration-300" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-foreground mb-1.5">
@@ -629,7 +631,7 @@ export function DashboardView() {
                     </div>
                     <Button
                       variant="secondary"
-                      className="w-full mt-5 bg-secondary/80 hover:bg-secondary text-foreground border border-border hover:border-blue-500/30 transition-all"
+                      className="w-full mt-4 sm:mt-5 bg-secondary/80 hover:bg-secondary text-foreground border border-border hover:border-blue-500/30 transition-all"
                       data-testid="open-existing-project"
                     >
                       <FolderOpen className="w-4 h-4 mr-2" />
@@ -643,21 +645,26 @@ export function DashboardView() {
 
           {/* Has projects - show project list */}
           {hasProjects && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Quick actions header */}
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <h2 className="text-2xl font-bold text-foreground">Your Projects</h2>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleOpenProject}>
-                    <FolderOpen className="w-4 h-4 mr-2" />
-                    Open Folder
+                  <Button
+                    variant="outline"
+                    onClick={handleOpenProject}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <FolderOpen className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Open Folder</span>
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button className="bg-linear-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white">
-                        <Plus className="w-4 h-4 mr-2" />
-                        New Project
-                        <ChevronDown className="w-4 h-4 ml-2" />
+                      <Button className="flex-1 sm:flex-none bg-linear-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white">
+                        <Plus className="w-4 h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">New Project</span>
+                        <span className="sm:hidden">New</span>
+                        <ChevronDown className="w-4 h-4 ml-1 sm:ml-2" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
@@ -677,13 +684,15 @@ export function DashboardView() {
               {/* Favorites section */}
               {favoriteProjects.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                  <div className="flex items-center gap-2 sm:gap-2.5 mb-3 sm:mb-4">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                      <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-500" />
                     </div>
-                    <h3 className="text-lg font-semibold text-foreground">Favorites</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                      Favorites
+                    </h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {favoriteProjects.map((project) => (
                       <div
                         key={project.id}
@@ -692,40 +701,40 @@ export function DashboardView() {
                         data-testid={`project-card-${project.id}`}
                       >
                         <div className="absolute inset-0 rounded-xl bg-linear-to-br from-yellow-500/5 to-amber-600/5 opacity-0 group-hover:opacity-100 transition-all duration-300" />
-                        <div className="relative p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center group-hover:bg-yellow-500/20 transition-all duration-300 shrink-0">
-                              <Folder className="w-5 h-5 text-yellow-500" />
+                        <div className="relative p-3 sm:p-4">
+                          <div className="flex items-start gap-2.5 sm:gap-3">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center group-hover:bg-yellow-500/20 transition-all duration-300 shrink-0">
+                              <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-foreground truncate group-hover:text-yellow-500 transition-colors duration-300">
+                              <p className="text-sm sm:text-base font-medium text-foreground truncate group-hover:text-yellow-500 transition-colors duration-300">
                                 {project.name}
                               </p>
-                              <p className="text-xs text-muted-foreground/70 truncate mt-1">
+                              <p className="text-xs text-muted-foreground/70 truncate mt-0.5 sm:mt-1">
                                 {project.path}
                               </p>
                               {project.lastOpened && (
-                                <p className="text-xs text-muted-foreground mt-1.5">
+                                <p className="text-xs text-muted-foreground mt-1 sm:mt-1.5">
                                   {new Date(project.lastOpened).toLocaleDateString()}
                                 </p>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5 sm:gap-1">
                               <button
                                 onClick={(e) => handleToggleFavorite(e, project.id)}
-                                className="p-1.5 rounded-lg hover:bg-yellow-500/20 transition-colors"
+                                className="p-1 sm:p-1.5 rounded-lg hover:bg-yellow-500/20 transition-colors"
                                 title="Remove from favorites"
                               >
-                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-500" />
                               </button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <button
                                     onClick={(e) => e.stopPropagation()}
-                                    className="p-1.5 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                                    className="p-1 sm:p-1.5 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
                                     title="More options"
                                   >
-                                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                    <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                                   </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
@@ -750,13 +759,15 @@ export function DashboardView() {
               {/* Recent projects section */}
               {recentProjects.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 sm:gap-2.5 mb-3 sm:mb-4">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+                      <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-semibold text-foreground">Recent Projects</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                      Recent Projects
+                    </h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {recentProjects.map((project) => (
                       <div
                         key={project.id}
@@ -765,40 +776,40 @@ export function DashboardView() {
                         data-testid={`project-card-${project.id}`}
                       >
                         <div className="absolute inset-0 rounded-xl bg-linear-to-br from-brand-500/0 to-purple-600/0 group-hover:from-brand-500/5 group-hover:to-purple-600/5 transition-all duration-300" />
-                        <div className="relative p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-muted/80 border border-border flex items-center justify-center group-hover:bg-brand-500/10 group-hover:border-brand-500/30 transition-all duration-300 shrink-0">
-                              <Folder className="w-5 h-5 text-muted-foreground group-hover:text-brand-500 transition-colors duration-300" />
+                        <div className="relative p-3 sm:p-4">
+                          <div className="flex items-start gap-2.5 sm:gap-3">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted/80 border border-border flex items-center justify-center group-hover:bg-brand-500/10 group-hover:border-brand-500/30 transition-all duration-300 shrink-0">
+                              <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-brand-500 transition-colors duration-300" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-foreground truncate group-hover:text-brand-500 transition-colors duration-300">
+                              <p className="text-sm sm:text-base font-medium text-foreground truncate group-hover:text-brand-500 transition-colors duration-300">
                                 {project.name}
                               </p>
-                              <p className="text-xs text-muted-foreground/70 truncate mt-1">
+                              <p className="text-xs text-muted-foreground/70 truncate mt-0.5 sm:mt-1">
                                 {project.path}
                               </p>
                               {project.lastOpened && (
-                                <p className="text-xs text-muted-foreground mt-1.5">
+                                <p className="text-xs text-muted-foreground mt-1 sm:mt-1.5">
                                   {new Date(project.lastOpened).toLocaleDateString()}
                                 </p>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5 sm:gap-1">
                               <button
                                 onClick={(e) => handleToggleFavorite(e, project.id)}
-                                className="p-1.5 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-1 sm:p-1.5 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
                                 title="Add to favorites"
                               >
-                                <Star className="w-4 h-4 text-muted-foreground hover:text-yellow-500" />
+                                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground hover:text-yellow-500" />
                               </button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <button
                                     onClick={(e) => e.stopPropagation()}
-                                    className="p-1.5 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                                    className="p-1 sm:p-1.5 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
                                     title="More options"
                                   >
-                                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                    <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                                   </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
