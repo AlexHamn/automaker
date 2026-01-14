@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { useEffect, useState } from 'react';
-import { Feature, ThinkingLevel } from '@/store/app-store';
+import { useEffect, useState, useMemo } from 'react';
+import { Feature, ThinkingLevel, ParsedTask } from '@/store/app-store';
 import type { ReasoningEffort } from '@automaker/types';
 import { getProviderFromModel } from '@/lib/utils';
 import {
@@ -71,6 +71,22 @@ export function AgentInfoPanel({
   const [agentInfo, setAgentInfo] = useState<AgentTaskInfo | null>(null);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isTodosExpanded, setIsTodosExpanded] = useState(false);
+
+  // Derive effective todos from planSpec.tasks when available, fallback to agentInfo.todos
+  // This fixes the issue where Kanban cards show "0/0 tasks" when the agent uses planSpec
+  // instead of emitting TodoWrite tool calls in the output log
+  const effectiveTodos = useMemo(() => {
+    // First priority: use planSpec.tasks if available (modern approach)
+    if (feature.planSpec?.tasks && feature.planSpec.tasks.length > 0) {
+      return feature.planSpec.tasks.map((task: ParsedTask) => ({
+        content: task.description,
+        // Map 'failed' status to 'pending' since todo display doesn't support 'failed'
+        status: task.status === 'failed' ? 'pending' : task.status,
+      }));
+    }
+    // Fallback: use parsed agentInfo.todos from agent-output.md
+    return agentInfo?.todos || [];
+  }, [feature.planSpec?.tasks, agentInfo?.todos]);
 
   useEffect(() => {
     const loadContext = async () => {
@@ -189,13 +205,13 @@ export function AgentInfoPanel({
           </div>
 
           {/* Task List Progress */}
-          {agentInfo.todos.length > 0 && (
+          {effectiveTodos.length > 0 && (
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
                 <ListTodo className="w-3 h-3" />
                 <span>
-                  {agentInfo.todos.filter((t) => t.status === 'completed').length}/
-                  {agentInfo.todos.length} tasks
+                  {effectiveTodos.filter((t) => t.status === 'completed').length}/
+                  {effectiveTodos.length} tasks
                 </span>
               </div>
               <div
@@ -204,7 +220,7 @@ export function AgentInfoPanel({
                   isTodosExpanded ? 'max-h-40' : 'max-h-16'
                 )}
               >
-                {(isTodosExpanded ? agentInfo.todos : agentInfo.todos.slice(0, 3)).map(
+                {(isTodosExpanded ? effectiveTodos : effectiveTodos.slice(0, 3)).map(
                   (todo, idx) => (
                     <div key={idx} className="flex items-center gap-1.5 text-[10px]">
                       {todo.status === 'completed' ? (
@@ -227,7 +243,7 @@ export function AgentInfoPanel({
                     </div>
                   )
                 )}
-                {agentInfo.todos.length > 3 && (
+                {effectiveTodos.length > 3 && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -237,7 +253,7 @@ export function AgentInfoPanel({
                     onMouseDown={(e) => e.stopPropagation()}
                     className="text-[10px] text-muted-foreground/60 pl-4 hover:text-muted-foreground transition-colors cursor-pointer"
                   >
-                    {isTodosExpanded ? 'Show less' : `+${agentInfo.todos.length - 3} more`}
+                    {isTodosExpanded ? 'Show less' : `+${effectiveTodos.length - 3} more`}
                   </button>
                 )}
               </div>
@@ -286,10 +302,10 @@ export function AgentInfoPanel({
                       <Wrench className="w-2.5 h-2.5" />
                       {agentInfo.toolCallCount} tool calls
                     </span>
-                    {agentInfo.todos.length > 0 && (
+                    {effectiveTodos.length > 0 && (
                       <span className="flex items-center gap-1">
                         <CheckCircle2 className="w-2.5 h-2.5 text-[var(--status-success)]" />
-                        {agentInfo.todos.filter((t) => t.status === 'completed').length} tasks done
+                        {effectiveTodos.filter((t) => t.status === 'completed').length} tasks done
                       </span>
                     )}
                   </div>
