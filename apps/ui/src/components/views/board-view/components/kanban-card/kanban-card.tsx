@@ -97,7 +97,7 @@ export const KanbanCard = memo(function KanbanCard({
   isSelected = false,
   onToggleSelect,
 }: KanbanCardProps) {
-  const { useWorktrees } = useAppStore();
+  const { useWorktrees, currentProject } = useAppStore();
   const [isLifted, setIsLifted] = useState(false);
 
   useLayoutEffect(() => {
@@ -213,6 +213,7 @@ export const KanbanCard = memo(function KanbanCard({
         {/* Agent Info Panel */}
         <AgentInfoPanel
           feature={feature}
+          projectPath={currentProject?.path ?? ''}
           contextContent={contextContent}
           summary={summary}
           isCurrentAutoTask={isCurrentAutoTask}

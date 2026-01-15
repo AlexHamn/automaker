@@ -14,6 +14,7 @@ import { TaskProgressPanel } from '@/components/ui/task-progress-panel';
 import { Markdown } from '@/components/ui/markdown';
 import { useAppStore } from '@/store/app-store';
 import { extractSummary } from '@/lib/log-parser';
+import { useAgentOutput } from '@/hooks/queries';
 import type { AutoModeEvent } from '@/types/electron';
 
 interface AgentOutputModalProps {
@@ -40,10 +41,29 @@ export function AgentOutputModal({
   onNumberKeyPress,
   projectPath: projectPathProp,
 }: AgentOutputModalProps) {
-  const [output, setOutput] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  // Resolve project path - prefer prop, fallback to window.__currentProject
+  const resolvedProjectPath = projectPathProp || (window as any).__currentProject?.path || '';
+
+  // Track additional content from WebSocket events (appended to query data)
+  const [streamedContent, setStreamedContent] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode | null>(null);
-  const [projectPath, setProjectPath] = useState<string>('');
+
+  // Use React Query for initial output loading
+  const { data: initialOutput = '', isLoading } = useAgentOutput(
+    resolvedProjectPath,
+    featureId,
+    open && !!resolvedProjectPath
+  );
+
+  // Reset streamed content when modal opens or featureId changes
+  useEffect(() => {
+    if (open) {
+      setStreamedContent('');
+    }
+  }, [open, featureId]);
+
+  // Combine initial output from query with streamed content from WebSocket
+  const output = initialOutput + streamedContent;
 
   // Extract summary from output
   const summary = useMemo(() => extractSummary(output), [output]);
@@ -52,7 +72,6 @@ export function AgentOutputModal({
   const effectiveViewMode = viewMode ?? (summary ? 'summary' : 'parsed');
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
-  const projectPathRef = useRef<string>('');
   const useWorktrees = useAppStore((state) => state.useWorktrees);
 
   // Auto-scroll to bottom when output changes
@@ -61,50 +80,6 @@ export function AgentOutputModal({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [output]);
-
-  // Load existing output from file
-  useEffect(() => {
-    if (!open) return;
-
-    const loadOutput = async () => {
-      const api = getElectronAPI();
-      if (!api) return;
-
-      setIsLoading(true);
-
-      try {
-        // Use projectPath prop if provided, otherwise fall back to window.__currentProject for backward compatibility
-        const resolvedProjectPath = projectPathProp || (window as any).__currentProject?.path;
-        if (!resolvedProjectPath) {
-          setIsLoading(false);
-          return;
-        }
-
-        projectPathRef.current = resolvedProjectPath;
-        setProjectPath(resolvedProjectPath);
-
-        // Use features API to get agent output
-        if (api.features) {
-          const result = await api.features.getAgentOutput(resolvedProjectPath, featureId);
-
-          if (result.success) {
-            setOutput(result.content || '');
-          } else {
-            setOutput('');
-          }
-        } else {
-          setOutput('');
-        }
-      } catch (error) {
-        console.error('Failed to load output:', error);
-        setOutput('');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadOutput();
-  }, [open, featureId, projectPathProp]);
 
   // Listen to auto mode events and update output
   useEffect(() => {
@@ -264,8 +239,8 @@ export function AgentOutputModal({
       }
 
       if (newContent) {
-        // Only update local state - server is the single source of truth for file writes
-        setOutput((prev) => prev + newContent);
+        // Append new content from WebSocket to streamed content
+        setStreamedContent((prev) => prev + newContent);
       }
     });
 
@@ -379,15 +354,15 @@ export function AgentOutputModal({
         {/* Task Progress Panel - shows when tasks are being executed */}
         <TaskProgressPanel
           featureId={featureId}
-          projectPath={projectPath}
+          projectPath={resolvedProjectPath}
           className="flex-shrink-0 mx-3 my-2"
         />
 
         {effectiveViewMode === 'changes' ? (
           <div className="flex-1 min-h-0 sm:min-h-[200px] sm:max-h-[60vh] overflow-y-auto scrollbar-visible">
-            {projectPath ? (
+            {resolvedProjectPath ? (
               <GitDiffPanel
-                projectPath={projectPath}
+                projectPath={resolvedProjectPath}
                 featureId={featureId}
                 compact={false}
                 useWorktrees={useWorktrees}

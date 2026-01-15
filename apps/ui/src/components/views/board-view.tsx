@@ -79,6 +79,9 @@ import { SelectionActionBar, ListView } from './board-view/components';
 import { MassEditDialog } from './board-view/dialogs';
 import { InitScriptIndicator } from './board-view/init-script-indicator';
 import { useInitScriptEvents } from '@/hooks/use-init-script-events';
+import { usePipelineConfig } from '@/hooks/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
 
 // Stable empty array to avoid infinite loop in selector
 const EMPTY_WORKTREES: ReturnType<ReturnType<typeof useAppStore.getState>['getWorktrees']> = [];
@@ -109,8 +112,9 @@ export function BoardView() {
     getPrimaryWorktreeBranch,
     setPipelineConfig,
   } = useAppStore();
-  // Subscribe to pipelineConfigByProject to trigger re-renders when it changes
-  const pipelineConfigByProject = useAppStore((state) => state.pipelineConfigByProject);
+  // Fetch pipeline config via React Query
+  const { data: pipelineConfig } = usePipelineConfig(currentProject?.path);
+  const queryClient = useQueryClient();
   // Subscribe to worktreePanelVisibleByProject to trigger re-renders when it changes
   const worktreePanelVisibleByProject = useAppStore((state) => state.worktreePanelVisibleByProject);
   // Subscribe to showInitScriptIndicatorByProject to trigger re-renders when it changes
@@ -240,25 +244,6 @@ export function BoardView() {
     featuresWithContext,
     setFeaturesWithContext,
   });
-
-  // Load pipeline config when project changes
-  useEffect(() => {
-    if (!currentProject?.path) return;
-
-    const loadPipelineConfig = async () => {
-      try {
-        const api = getHttpApiClient();
-        const result = await api.pipeline.getConfig(currentProject.path);
-        if (result.success && result.config) {
-          setPipelineConfig(currentProject.path, result.config);
-        }
-      } catch (error) {
-        logger.error('Failed to load pipeline config:', error);
-      }
-    };
-
-    loadPipelineConfig();
-  }, [currentProject?.path, setPipelineConfig]);
 
   // Auto mode hook
   const autoMode = useAutoMode();
@@ -1131,9 +1116,7 @@ export function BoardView() {
   });
 
   // Build columnFeaturesMap for ListView
-  const pipelineConfig = currentProject?.path
-    ? pipelineConfigByProject[currentProject.path] || null
-    : null;
+  // pipelineConfig is now from usePipelineConfig React Query hook at the top
   const columnFeaturesMap = useMemo(() => {
     const columns = getColumnsWithPipeline(pipelineConfig);
     const map: Record<string, typeof hookFeatures> = {};
@@ -1585,6 +1568,11 @@ export function BoardView() {
           if (!result.success) {
             throw new Error(result.error || 'Failed to save pipeline config');
           }
+          // Invalidate React Query cache to refetch updated config
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.pipeline.config(currentProject.path),
+          });
+          // Also update Zustand for backward compatibility
           setPipelineConfig(currentProject.path, config);
         }}
       />
