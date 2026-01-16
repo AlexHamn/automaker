@@ -19,6 +19,7 @@ import { WorktreesSection } from './settings-view/worktrees';
 import { DangerZoneSection } from './settings-view/danger-zone/danger-zone-section';
 import { AccountSection } from './settings-view/account';
 import { SecuritySection } from './settings-view/security';
+import { DeveloperSection } from './settings-view/developer/developer-section';
 import {
   ClaudeSettingsTab,
   CursorSettingsTab,
@@ -27,6 +28,7 @@ import {
 } from './settings-view/providers';
 import { MCPServersSection } from './settings-view/mcp-servers';
 import { PromptCustomizationSection } from './settings-view/prompts';
+import { EventHooksSection } from './settings-view/event-hooks';
 import type { Project as SettingsProject, Theme } from './settings-view/shared/types';
 import type { Project as ElectronProject } from '@/lib/electron';
 
@@ -183,6 +185,8 @@ export function SettingsView() {
         return (
           <AudioSection muteDoneSound={muteDoneSound} onMuteDoneSoundChange={setMuteDoneSound} />
         );
+      case 'event-hooks':
+        return <EventHooksSection />;
       case 'defaults':
         return (
           <FeatureDefaultsSection
@@ -215,6 +219,8 @@ export function SettingsView() {
             onSkipSandboxWarningChange={setSkipSandboxWarning}
           />
         );
+      case 'developer':
+        return <DeveloperSection />;
       case 'danger':
         return (
           <DangerZoneSection

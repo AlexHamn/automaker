@@ -128,6 +128,7 @@ export type {
   ThemeMode,
   PlanningMode,
   ThinkingLevel,
+  ServerLogLevel,
   ModelProvider,
   PhaseModelEntry,
   PhaseModelConfig,
@@ -143,6 +144,13 @@ export type {
   BoardBackgroundSettings,
   WorktreeInfo,
   ProjectSettings,
+  // Event hook types
+  EventHookTrigger,
+  EventHookHttpMethod,
+  EventHookShellAction,
+  EventHookHttpAction,
+  EventHookAction,
+  EventHook,
 } from './settings.js';
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,
@@ -155,6 +163,8 @@ export {
   PROJECT_SETTINGS_VERSION,
   THINKING_TOKEN_BUDGET,
   getThinkingTokenBudget,
+  // Event hook constants
+  EVENT_HOOK_TRIGGER_LABELS,
 } from './settings.js';
 
 // Model display constants

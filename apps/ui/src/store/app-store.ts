@@ -24,6 +24,8 @@ import type {
   PipelineStep,
   PromptCustomization,
   ModelDefinition,
+  ServerLogLevel,
+  EventHook,
 } from '@automaker/types';
 import {
   getAllCursorModelIds,
@@ -43,6 +45,7 @@ export type {
   PlanningMode,
   ThinkingLevel,
   ModelProvider,
+  ServerLogLevel,
   FeatureTextFilePath,
   FeatureImagePath,
 };
@@ -564,6 +567,10 @@ export interface AppState {
   // Audio Settings
   muteDoneSound: boolean; // When true, mute the notification sound when agents complete (default: false)
 
+  // Server Log Level Settings
+  serverLogLevel: ServerLogLevel; // Log level for the API server (error, warn, info, debug)
+  enableRequestLogging: boolean; // Enable HTTP request logging (Morgan)
+
   // Enhancement Model Settings
   enhancementModel: ModelAlias; // Model used for feature enhancement (default: sonnet)
 
@@ -629,6 +636,9 @@ export interface AppState {
 
   // Prompt Customization
   promptCustomization: PromptCustomization; // Custom prompts for Auto Mode, Agent, Backlog Plan, Enhancement
+
+  // Event Hooks
+  eventHooks: EventHook[]; // Event hooks for custom commands or webhooks
 
   // Project Analysis
   projectAnalysis: ProjectAnalysis | null;
@@ -982,6 +992,10 @@ export interface AppActions {
   // Audio Settings actions
   setMuteDoneSound: (muted: boolean) => void;
 
+  // Server Log Level actions
+  setServerLogLevel: (level: ServerLogLevel) => void;
+  setEnableRequestLogging: (enabled: boolean) => void;
+
   // Enhancement Model actions
   setEnhancementModel: (model: ModelAlias) => void;
 
@@ -1038,6 +1052,9 @@ export interface AppActions {
 
   // Prompt Customization actions
   setPromptCustomization: (customization: PromptCustomization) => Promise<void>;
+
+  // Event Hook actions
+  setEventHooks: (hooks: EventHook[]) => void;
 
   // MCP Server actions
   addMCPServer: (server: Omit<MCPServerConfig, 'id'>) => void;
@@ -1250,6 +1267,8 @@ const initialState: AppState = {
   worktreesByProject: {},
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS, // Default keyboard shortcuts
   muteDoneSound: false, // Default to sound enabled (not muted)
+  serverLogLevel: 'info', // Default to info level for server logs
+  enableRequestLogging: true, // Default to enabled for HTTP request logging
   enhancementModel: 'sonnet', // Default to sonnet for feature enhancement
   validationModel: 'opus', // Default to opus for GitHub issue validation
   phaseModels: DEFAULT_PHASE_MODELS, // Phase-specific model configuration
@@ -1282,6 +1301,7 @@ const initialState: AppState = {
   enableSubagents: true, // Subagents enabled by default
   subagentsSources: ['user', 'project'] as Array<'user' | 'project'>, // Load from both sources by default
   promptCustomization: {}, // Empty by default - all prompts use built-in defaults
+  eventHooks: [], // No event hooks configured by default
   projectAnalysis: null,
   isAnalyzing: false,
   boardBackgroundByProject: {},
@@ -2036,6 +2056,10 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // Audio Settings actions
   setMuteDoneSound: (muted) => set({ muteDoneSound: muted }),
 
+  // Server Log Level actions
+  setServerLogLevel: (level) => set({ serverLogLevel: level }),
+  setEnableRequestLogging: (enabled) => set({ enableRequestLogging: enabled }),
+
   // Enhancement Model actions
   setEnhancementModel: (model) => set({ enhancementModel: model }),
 
@@ -2206,6 +2230,9 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
     await syncSettingsToServer();
   },
+
+  // Event Hook actions
+  setEventHooks: (hooks) => set({ eventHooks: hooks }),
 
   // MCP Server actions
   addMCPServer: (server) => {

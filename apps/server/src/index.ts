@@ -17,9 +17,19 @@ import dotenv from 'dotenv';
 
 import { createEventEmitter, type EventEmitter } from './lib/events.js';
 import { initAllowedPaths } from '@automaker/platform';
-import { createLogger } from '@automaker/utils';
+import { createLogger, setLogLevel, LogLevel } from '@automaker/utils';
 
 const logger = createLogger('Server');
+
+/**
+ * Map server log level string to LogLevel enum
+ */
+const LOG_LEVEL_MAP: Record<string, LogLevel> = {
+  error: LogLevel.ERROR,
+  warn: LogLevel.WARN,
+  info: LogLevel.INFO,
+  debug: LogLevel.DEBUG,
+};
 import { authMiddleware, validateWsConnectionToken, checkRawAuthentication } from './lib/auth.js';
 import { requireJsonContentType } from './middleware/require-json-content-type.js';
 import { createAuthRoutes } from './routes/auth/index.js';
@@ -68,13 +78,31 @@ import { pipelineService } from './services/pipeline-service.js';
 import { createIdeationRoutes } from './routes/ideation/index.js';
 import { IdeationService } from './services/ideation-service.js';
 import { getDevServerService } from './services/dev-server-service.js';
+import { eventHookService } from './services/event-hook-service.js';
 
 // Load environment variables
 dotenv.config();
 
 const PORT = parseInt(process.env.PORT || '3008', 10);
 const DATA_DIR = process.env.DATA_DIR || './data';
-const ENABLE_REQUEST_LOGGING = process.env.ENABLE_REQUEST_LOGGING !== 'false'; // Default to true
+const ENABLE_REQUEST_LOGGING_DEFAULT = process.env.ENABLE_REQUEST_LOGGING !== 'false'; // Default to true
+
+// Runtime-configurable request logging flag (can be changed via settings)
+let requestLoggingEnabled = ENABLE_REQUEST_LOGGING_DEFAULT;
+
+/**
+ * Enable or disable HTTP request logging at runtime
+ */
+export function setRequestLoggingEnabled(enabled: boolean): void {
+  requestLoggingEnabled = enabled;
+}
+
+/**
+ * Get current request logging state
+ */
+export function isRequestLoggingEnabled(): boolean {
+  return requestLoggingEnabled;
+}
 
 // Check for required environment variables
 const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
@@ -103,22 +131,21 @@ initAllowedPaths();
 const app = express();
 
 // Middleware
-// Custom colored logger showing only endpoint and status code (configurable via ENABLE_REQUEST_LOGGING env var)
-if (ENABLE_REQUEST_LOGGING) {
-  morgan.token('status-colored', (_req, res) => {
-    const status = res.statusCode;
-    if (status >= 500) return `\x1b[31m${status}\x1b[0m`; // Red for server errors
-    if (status >= 400) return `\x1b[33m${status}\x1b[0m`; // Yellow for client errors
-    if (status >= 300) return `\x1b[36m${status}\x1b[0m`; // Cyan for redirects
-    return `\x1b[32m${status}\x1b[0m`; // Green for success
-  });
+// Custom colored logger showing only endpoint and status code (dynamically configurable)
+morgan.token('status-colored', (_req, res) => {
+  const status = res.statusCode;
+  if (status >= 500) return `\x1b[31m${status}\x1b[0m`; // Red for server errors
+  if (status >= 400) return `\x1b[33m${status}\x1b[0m`; // Yellow for client errors
+  if (status >= 300) return `\x1b[36m${status}\x1b[0m`; // Cyan for redirects
+  return `\x1b[32m${status}\x1b[0m`; // Green for success
+});
 
-  app.use(
-    morgan(':method :url :status-colored', {
-      skip: (req) => req.url === '/api/health', // Skip health check logs
-    })
-  );
-}
+app.use(
+  morgan(':method :url :status-colored', {
+    // Skip when request logging is disabled or for health check endpoints
+    skip: (req) => !requestLoggingEnabled || req.url === '/api/health',
+  })
+);
 // CORS configuration
 // When using credentials (cookies), origin cannot be '*'
 // We dynamically allow the requesting origin for local development
@@ -181,8 +208,26 @@ const ideationService = new IdeationService(events, settingsService, featureLoad
 const devServerService = getDevServerService();
 devServerService.setEventEmitter(events);
 
+// Initialize Event Hook Service for custom event triggers
+eventHookService.initialize(events, settingsService);
+
 // Initialize services
 (async () => {
+  // Apply logging settings from saved settings
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    if (settings.serverLogLevel && LOG_LEVEL_MAP[settings.serverLogLevel] !== undefined) {
+      setLogLevel(LOG_LEVEL_MAP[settings.serverLogLevel]);
+      logger.info(`Server log level set to: ${settings.serverLogLevel}`);
+    }
+    // Apply request logging setting (default true if not set)
+    const enableRequestLog = settings.enableRequestLogging ?? true;
+    setRequestLoggingEnabled(enableRequestLog);
+    logger.info(`HTTP request logging: ${enableRequestLog ? 'enabled' : 'disabled'}`);
+  } catch (err) {
+    logger.warn('Failed to load logging settings, using defaults');
+  }
+
   await agentService.initialize();
   logger.info('Agent service initialized');
 
