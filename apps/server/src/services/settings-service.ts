@@ -273,13 +273,39 @@ export class SettingsService {
     };
 
     const currentProjectsLen = Array.isArray(current.projects) ? current.projects.length : 0;
+    // Check if this is a legitimate project removal (moved to trash) vs accidental wipe
+    const newTrashedProjectsLen = Array.isArray(sanitizedUpdates.trashedProjects)
+      ? sanitizedUpdates.trashedProjects.length
+      : Array.isArray(current.trashedProjects)
+        ? current.trashedProjects.length
+        : 0;
+
     if (
       Array.isArray(sanitizedUpdates.projects) &&
       sanitizedUpdates.projects.length === 0 &&
       currentProjectsLen > 0
     ) {
-      attemptedProjectWipe = true;
-      delete sanitizedUpdates.projects;
+      // Only treat as accidental wipe if trashedProjects is also empty
+      // (If projects are moved to trash, they appear in trashedProjects)
+      if (newTrashedProjectsLen === 0) {
+        logger.warn(
+          '[WIPE_PROTECTION] Attempted to set projects to empty array with no trash! Ignoring update.',
+          {
+            currentProjectsLen,
+            newProjectsLen: 0,
+            newTrashedProjectsLen,
+            currentProjects: current.projects?.map((p) => p.name),
+          }
+        );
+        attemptedProjectWipe = true;
+        delete sanitizedUpdates.projects;
+      } else {
+        logger.info('[LEGITIMATE_REMOVAL] Removing all projects to trash', {
+          currentProjectsLen,
+          newProjectsLen: 0,
+          movedToTrash: newTrashedProjectsLen,
+        });
+      }
     }
 
     ignoreEmptyArrayOverwrite('trashedProjects');

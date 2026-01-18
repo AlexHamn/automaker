@@ -81,7 +81,15 @@ const SETUP_FIELDS_TO_SYNC = ['isFirstRun', 'setupComplete', 'skipClaudeSetup'] 
 
 /**
  * Helper to extract a settings field value from app state
- * Handles special cases for nested/mapped fields
+ *
+ * Handles special cases where store fields don't map directly to settings:
+ * - currentProjectId: Extract from currentProject?.id
+ * - terminalFontFamily: Extract from terminalState.fontFamily
+ * - Other fields: Direct access
+ *
+ * @param field The settings field to extract
+ * @param appState Current app store state
+ * @returns The value of the field in the app state
  */
 function getSettingsFieldValue(
   field: (typeof SETTINGS_FIELDS_TO_SYNC)[number],
@@ -98,6 +106,16 @@ function getSettingsFieldValue(
 
 /**
  * Helper to check if a settings field changed between states
+ *
+ * Compares field values between old and new state, handling special cases:
+ * - currentProjectId: Compare currentProject?.id values
+ * - terminalFontFamily: Compare terminalState.fontFamily values
+ * - Other fields: Direct reference equality check
+ *
+ * @param field The settings field to check
+ * @param newState New app store state
+ * @param prevState Previous app store state
+ * @returns true if the field value changed between states
  */
 function hasSettingsFieldChanged(
   field: (typeof SETTINGS_FIELDS_TO_SYNC)[number],
@@ -172,14 +190,18 @@ export function useSettingsSync(): SettingsSyncState {
       // Never sync when not authenticated or settings not loaded
       // The settingsLoaded flag ensures we don't sync default empty state before hydration
       const auth = useAuthStore.getState();
-      logger.debug('syncToServer check:', {
+      logger.debug('[SYNC_CHECK] Auth state:', {
         authChecked: auth.authChecked,
         isAuthenticated: auth.isAuthenticated,
         settingsLoaded: auth.settingsLoaded,
         projectsCount: useAppStore.getState().projects?.length ?? 0,
       });
       if (!auth.authChecked || !auth.isAuthenticated || !auth.settingsLoaded) {
-        logger.debug('Sync skipped: not authenticated or settings not loaded');
+        logger.warn('[SYNC_SKIPPED] Not ready:', {
+          authChecked: auth.authChecked,
+          isAuthenticated: auth.isAuthenticated,
+          settingsLoaded: auth.settingsLoaded,
+        });
         return;
       }
 
@@ -187,7 +209,9 @@ export function useSettingsSync(): SettingsSyncState {
       const api = getHttpApiClient();
       const appState = useAppStore.getState();
 
-      logger.debug('Syncing to server:', { projectsCount: appState.projects?.length ?? 0 });
+      logger.info('[SYNC_START] Syncing to server:', {
+        projectsCount: appState.projects?.length ?? 0,
+      });
 
       // Build updates object from current state
       const updates: Record<string, unknown> = {};
@@ -204,17 +228,30 @@ export function useSettingsSync(): SettingsSyncState {
       // Create a hash of the updates to avoid redundant syncs
       const updateHash = JSON.stringify(updates);
       if (updateHash === lastSyncedRef.current) {
-        logger.debug('Sync skipped: no changes');
+        logger.debug('[SYNC_SKIP_IDENTICAL] No changes from last sync');
         setState((s) => ({ ...s, syncing: false }));
         return;
       }
 
-      logger.info('Sending settings update:', { projects: updates.projects });
+      logger.info('[SYNC_SEND] Sending settings update to server:', {
+        projects: (updates.projects as any)?.length ?? 0,
+        trashedProjects: (updates.trashedProjects as any)?.length ?? 0,
+      });
 
       const result = await api.settings.updateGlobal(updates);
+      logger.info('[SYNC_RESPONSE] Server response:', { success: result.success });
       if (result.success) {
         lastSyncedRef.current = updateHash;
         logger.debug('Settings synced to server');
+
+        // Update localStorage cache with synced settings to keep it fresh
+        // This prevents stale data when switching between Electron and web modes
+        try {
+          setItem('automaker-settings-cache', JSON.stringify(updates));
+          logger.debug('Updated localStorage cache after sync');
+        } catch (storageError) {
+          logger.warn('Failed to update localStorage cache after sync:', storageError);
+        }
       } else {
         logger.error('Failed to sync settings:', result.error);
       }
@@ -340,9 +377,24 @@ export function useSettingsSync(): SettingsSyncState {
         return;
       }
 
-      // Check if any synced field changed
+      // If projects array changed (by reference, meaning content changed), sync immediately
+      // This is critical - projects list changes must sync right away to prevent loss
+      // when switching between Electron and web modes or closing the app
+      if (newState.projects !== prevState.projects) {
+        logger.info('[PROJECTS_CHANGED] Projects array changed, syncing immediately', {
+          prevCount: prevState.projects?.length ?? 0,
+          newCount: newState.projects?.length ?? 0,
+          prevProjects: prevState.projects?.map((p) => p.name) ?? [],
+          newProjects: newState.projects?.map((p) => p.name) ?? [],
+        });
+        syncNow();
+        return;
+      }
+
+      // Check if any other synced field changed
       let changed = false;
       for (const field of SETTINGS_FIELDS_TO_SYNC) {
+        if (field === 'projects') continue; // Already handled above
         if (hasSettingsFieldChanged(field, newState, prevState)) {
           changed = true;
           break;

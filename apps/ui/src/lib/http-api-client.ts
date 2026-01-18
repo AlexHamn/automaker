@@ -156,6 +156,12 @@ const getServerUrl = (): string => {
   if (typeof window !== 'undefined') {
     const envUrl = import.meta.env.VITE_SERVER_URL;
     if (envUrl) return envUrl;
+
+    // In web mode (not Electron), use relative URL to leverage Vite proxy
+    // This avoids CORS issues since requests appear same-origin
+    if (!window.electron) {
+      return '';
+    }
   }
   // Use VITE_HOSTNAME if set, otherwise default to localhost
   const hostname = import.meta.env.VITE_HOSTNAME || 'localhost';
@@ -173,8 +179,24 @@ let apiKeyInitialized = false;
 let apiKeyInitPromise: Promise<void> | null = null;
 
 // Cached session token for authentication (Web mode - explicit header auth)
-// Only used in-memory after fresh login; on refresh we rely on HTTP-only cookies
+// Persisted to localStorage to survive page reloads
 let cachedSessionToken: string | null = null;
+const SESSION_TOKEN_KEY = 'automaker:sessionToken';
+
+// Initialize cached session token from localStorage on module load
+// This ensures web mode survives page reloads with valid authentication
+const initSessionToken = (): void => {
+  if (typeof window === 'undefined') return; // Skip in SSR
+  try {
+    cachedSessionToken = window.localStorage.getItem(SESSION_TOKEN_KEY);
+  } catch {
+    // localStorage might be disabled or unavailable
+    cachedSessionToken = null;
+  }
+};
+
+// Initialize on module load
+initSessionToken();
 
 // Get API key for Electron mode (returns cached value after initialization)
 // Exported for use in WebSocket connections that need auth
@@ -194,14 +216,30 @@ export const waitForApiKeyInit = (): Promise<void> => {
 // Get session token for Web mode (returns cached value after login)
 export const getSessionToken = (): string | null => cachedSessionToken;
 
-// Set session token (called after login)
+// Set session token (called after login) - persists to localStorage for page reload survival
 export const setSessionToken = (token: string | null): void => {
   cachedSessionToken = token;
+  if (typeof window === 'undefined') return; // Skip in SSR
+  try {
+    if (token) {
+      window.localStorage.setItem(SESSION_TOKEN_KEY, token);
+    } else {
+      window.localStorage.removeItem(SESSION_TOKEN_KEY);
+    }
+  } catch {
+    // localStorage might be disabled; continue with in-memory cache
+  }
 };
 
 // Clear session token (called on logout)
 export const clearSessionToken = (): void => {
   cachedSessionToken = null;
+  if (typeof window === 'undefined') return; // Skip in SSR
+  try {
+    window.localStorage.removeItem(SESSION_TOKEN_KEY);
+  } catch {
+    // localStorage might be disabled
+  }
 };
 
 /**

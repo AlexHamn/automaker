@@ -1504,7 +1504,16 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   moveProjectToTrash: (projectId) => {
     const project = get().projects.find((p) => p.id === projectId);
-    if (!project) return;
+    if (!project) {
+      console.warn('[MOVE_TO_TRASH] Project not found:', projectId);
+      return;
+    }
+
+    console.log('[MOVE_TO_TRASH] Moving project to trash:', {
+      projectId,
+      projectName: project.name,
+      currentProjectCount: get().projects.length,
+    });
 
     const remainingProjects = get().projects.filter((p) => p.id !== projectId);
     const existingTrash = get().trashedProjects.filter((p) => p.id !== projectId);
@@ -1516,6 +1525,11 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
     const isCurrent = get().currentProject?.id === projectId;
     const nextCurrentProject = isCurrent ? null : get().currentProject;
+
+    console.log('[MOVE_TO_TRASH] Updating store with new state:', {
+      newProjectCount: remainingProjects.length,
+      newTrashedCount: [trashedProject, ...existingTrash].length,
+    });
 
     set({
       projects: remainingProjects,

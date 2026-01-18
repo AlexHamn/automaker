@@ -91,6 +91,9 @@ const PORT = parseInt(process.env.PORT || '3008', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const HOSTNAME = process.env.HOSTNAME || 'localhost';
 const DATA_DIR = process.env.DATA_DIR || './data';
+logger.info('[SERVER_STARTUP] process.env.DATA_DIR:', process.env.DATA_DIR);
+logger.info('[SERVER_STARTUP] Resolved DATA_DIR:', DATA_DIR);
+logger.info('[SERVER_STARTUP] process.cwd():', process.cwd());
 const ENABLE_REQUEST_LOGGING_DEFAULT = process.env.ENABLE_REQUEST_LOGGING !== 'false'; // Default to true
 
 // Runtime-configurable request logging flag (can be changed via settings)
@@ -175,14 +178,25 @@ app.use(
         return;
       }
 
-      // For local development, allow localhost origins
-      if (
-        origin.startsWith('http://localhost:') ||
-        origin.startsWith('http://127.0.0.1:') ||
-        origin.startsWith('http://[::1]:')
-      ) {
-        callback(null, origin);
-        return;
+      // For local development, allow all localhost/loopback origins (any port)
+      try {
+        const url = new URL(origin);
+        const hostname = url.hostname;
+
+        if (
+          hostname === 'localhost' ||
+          hostname === '127.0.0.1' ||
+          hostname === '::1' ||
+          hostname === '0.0.0.0' ||
+          hostname.startsWith('192.168.') ||
+          hostname.startsWith('10.') ||
+          hostname.startsWith('172.')
+        ) {
+          callback(null, origin);
+          return;
+        }
+      } catch (err) {
+        // Ignore URL parsing errors
       }
 
       // Reject other origins by default for security

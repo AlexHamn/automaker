@@ -111,9 +111,34 @@ export function resetMigrationState(): void {
 
 /**
  * Parse localStorage data into settings object
+ *
+ * Checks for settings in multiple locations:
+ * 1. automaker-settings-cache: Fresh server settings cached from last fetch
+ * 2. automaker-storage: Zustand-persisted app store state (legacy)
+ * 3. automaker-setup: Setup wizard state (legacy)
+ * 4. Standalone keys: worktree-panel-collapsed, file-browser-recent-folders, etc.
+ *
+ * @returns Merged settings object or null if no settings found
  */
 export function parseLocalStorageSettings(): Partial<GlobalSettings> | null {
   try {
+    // First, check for fresh server settings cache (updated whenever server settings are fetched)
+    // This prevents stale data when switching between modes
+    const settingsCache = getItem('automaker-settings-cache');
+    if (settingsCache) {
+      try {
+        const cached = JSON.parse(settingsCache) as GlobalSettings;
+        const cacheProjectCount = cached?.projects?.length ?? 0;
+        logger.info(`[CACHE_LOADED] projects=${cacheProjectCount}, theme=${cached?.theme}`);
+        return cached;
+      } catch (e) {
+        logger.warn('Failed to parse settings cache, falling back to old storage');
+      }
+    } else {
+      logger.info('[CACHE_EMPTY] No settings cache found in localStorage');
+    }
+
+    // Fall back to old Zustand persisted storage
     const automakerStorage = getItem('automaker-storage');
     if (!automakerStorage) {
       return null;
@@ -186,7 +211,14 @@ export function parseLocalStorageSettings(): Partial<GlobalSettings> | null {
 
 /**
  * Check if localStorage has more complete data than server
- * Returns true if localStorage has projects but server doesn't
+ *
+ * Compares the completeness of data to determine if a migration is needed.
+ * Returns true if localStorage has projects but server doesn't, indicating
+ * the localStorage data should be merged with server settings.
+ *
+ * @param localSettings Settings loaded from localStorage
+ * @param serverSettings Settings loaded from server
+ * @returns true if localStorage has more data that should be preserved
  */
 export function localStorageHasMoreData(
   localSettings: Partial<GlobalSettings> | null,
@@ -209,7 +241,15 @@ export function localStorageHasMoreData(
 
 /**
  * Merge localStorage settings with server settings
- * Prefers server data, but uses localStorage for missing arrays/objects
+ *
+ * Intelligently combines settings from both sources:
+ * - Prefers server data as the base
+ * - Uses localStorage values when server has empty arrays/objects
+ * - Specific handling for: projects, trashedProjects, mcpServers, recentFolders, etc.
+ *
+ * @param serverSettings Settings from server API (base)
+ * @param localSettings Settings from localStorage (fallback)
+ * @returns Merged GlobalSettings object ready to hydrate the store
  */
 export function mergeSettings(
   serverSettings: GlobalSettings,
@@ -291,20 +331,33 @@ export function mergeSettings(
  * This is the core migration logic extracted for use outside of React hooks.
  * Call this from __root.tsx during app initialization.
  *
- * @param serverSettings - Settings fetched from the server API
- * @returns Promise resolving to the final settings to use (merged if migration needed)
+ * Flow:
+ * 1. If server has localStorageMigrated flag, skip migration (already done)
+ * 2. Check if localStorage has more data than server
+ * 3. If yes, merge them and sync merged state back to server
+ * 4. Set localStorageMigrated flag to prevent re-migration
+ *
+ * @param serverSettings Settings fetched from the server API
+ * @returns Promise resolving to {settings, migrated} - final settings and whether migration occurred
  */
 export async function performSettingsMigration(
   serverSettings: GlobalSettings
 ): Promise<{ settings: GlobalSettings; migrated: boolean }> {
   // Get localStorage data
   const localSettings = parseLocalStorageSettings();
-  logger.info(`localStorage has ${localSettings?.projects?.length ?? 0} projects`);
-  logger.info(`Server has ${serverSettings.projects?.length ?? 0} projects`);
+  const localProjects = localSettings?.projects?.length ?? 0;
+  const serverProjects = serverSettings.projects?.length ?? 0;
+
+  logger.info('[MIGRATION_CHECK]', {
+    localStorageProjects: localProjects,
+    serverProjects: serverProjects,
+    localStorageMigrated: serverSettings.localStorageMigrated,
+    dataSourceMismatch: localProjects !== serverProjects,
+  });
 
   // Check if migration has already been completed
   if (serverSettings.localStorageMigrated) {
-    logger.info('localStorage migration already completed, using server settings only');
+    logger.info('[MIGRATION_SKIP] Using server settings only (migration already completed)');
     return { settings: serverSettings, migrated: false };
   }
 
@@ -412,6 +465,15 @@ export function useSettingsMigration(): MigrationState {
           if (global.success && global.settings) {
             serverSettings = global.settings as unknown as GlobalSettings;
             logger.info(`Server has ${serverSettings.projects?.length ?? 0} projects`);
+
+            // Update localStorage with fresh server data to keep cache in sync
+            // This prevents stale localStorage data from being used when switching between modes
+            try {
+              setItem('automaker-settings-cache', JSON.stringify(serverSettings));
+              logger.debug('Updated localStorage with fresh server settings');
+            } catch (storageError) {
+              logger.warn('Failed to update localStorage cache:', storageError);
+            }
           }
         } catch (error) {
           logger.error('Failed to fetch server settings:', error);

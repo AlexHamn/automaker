@@ -124,6 +124,19 @@ export function DashboardView() {
         const initResult = await initializeProject(path);
 
         if (!initResult.success) {
+          // If the project directory doesn't exist, automatically remove it from the project list
+          if (initResult.error?.includes('does not exist')) {
+            const projectToRemove = projects.find((p) => p.path === path);
+            if (projectToRemove) {
+              logger.warn(`[Dashboard] Removing project with non-existent path: ${path}`);
+              moveProjectToTrash(projectToRemove.id);
+              toast.error('Project directory not found', {
+                description: `Removed ${name} from your projects list since the directory no longer exists.`,
+              });
+              return;
+            }
+          }
+
           toast.error('Failed to initialize project', {
             description: initResult.error || 'Unknown error occurred',
           });
@@ -151,7 +164,15 @@ export function DashboardView() {
         setIsOpening(false);
       }
     },
-    [trashedProjects, currentProject, globalTheme, upsertAndSetCurrentProject, navigate]
+    [
+      projects,
+      trashedProjects,
+      currentProject,
+      globalTheme,
+      upsertAndSetCurrentProject,
+      navigate,
+      moveProjectToTrash,
+    ]
   );
 
   const handleOpenProject = useCallback(async () => {

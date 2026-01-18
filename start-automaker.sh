@@ -1075,7 +1075,8 @@ case $MODE in
         export TEST_PORT="$WEB_PORT"
         export VITE_SERVER_URL="http://$HOSTNAME:$SERVER_PORT"
         export PORT="$SERVER_PORT"
-        export CORS_ORIGIN="http://$HOSTNAME:$WEB_PORT,http://127.0.0.1:$WEB_PORT"
+        export DATA_DIR="$SCRIPT_DIR/data"
+        export CORS_ORIGIN="http://localhost:$WEB_PORT,http://$HOSTNAME:$WEB_PORT,http://127.0.0.1:$WEB_PORT"
         export VITE_APP_MODE="1"
 
         if [ "$PRODUCTION_MODE" = true ]; then
