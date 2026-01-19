@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { createLogger } from '@automaker/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
@@ -35,6 +36,7 @@ interface UseWorktreeActionsOptions {
 }
 
 export function useWorktreeActions({ fetchWorktrees, fetchBranches }: UseWorktreeActionsOptions) {
+  const navigate = useNavigate();
   const [isPulling, setIsPulling] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
@@ -125,6 +127,19 @@ export function useWorktreeActions({ fetchWorktrees, fetchBranches }: UseWorktre
     [isPushing, fetchBranches, fetchWorktrees]
   );
 
+  const handleOpenInIntegratedTerminal = useCallback(
+    (worktree: WorktreeInfo, mode?: 'tab' | 'split') => {
+      // Navigate to the terminal view with the worktree path and branch name
+      // The terminal view will handle creating the terminal with the specified cwd
+      // Include nonce to allow opening the same worktree multiple times
+      navigate({
+        to: '/terminal',
+        search: { cwd: worktree.path, branch: worktree.branch, mode, nonce: Date.now() },
+      });
+    },
+    [navigate]
+  );
+
   const handleOpenInEditor = useCallback(async (worktree: WorktreeInfo, editorCommand?: string) => {
     try {
       const api = getElectronAPI();
@@ -143,6 +158,27 @@ export function useWorktreeActions({ fetchWorktrees, fetchBranches }: UseWorktre
     }
   }, []);
 
+  const handleOpenInExternalTerminal = useCallback(
+    async (worktree: WorktreeInfo, terminalId?: string) => {
+      try {
+        const api = getElectronAPI();
+        if (!api?.worktree?.openInExternalTerminal) {
+          logger.warn('Open in external terminal API not available');
+          return;
+        }
+        const result = await api.worktree.openInExternalTerminal(worktree.path, terminalId);
+        if (result.success && result.result) {
+          toast.success(result.result.message);
+        } else if (result.error) {
+          toast.error(result.error);
+        }
+      } catch (error) {
+        logger.error('Open in external terminal failed:', error);
+      }
+    },
+    []
+  );
+
   return {
     isPulling,
     isPushing,
@@ -152,6 +188,8 @@ export function useWorktreeActions({ fetchWorktrees, fetchBranches }: UseWorktre
     handleSwitchBranch,
     handlePull,
     handlePush,
+    handleOpenInIntegratedTerminal,
     handleOpenInEditor,
+    handleOpenInExternalTerminal,
   };
 }

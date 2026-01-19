@@ -175,4 +175,14 @@ export {
   findEditorByCommand,
   openInEditor,
   openInFileManager,
+  openInTerminal,
 } from './editor.js';
+
+// External terminal detection and launching
+export {
+  clearTerminalCache,
+  detectAllTerminals,
+  detectDefaultTerminal,
+  findTerminalById,
+  openInExternalTerminal,
+} from './terminal.js';

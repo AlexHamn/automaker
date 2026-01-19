@@ -29,6 +29,13 @@ import {
   createGetAvailableEditorsHandler,
   createRefreshEditorsHandler,
 } from './routes/open-in-editor.js';
+import {
+  createOpenInTerminalHandler,
+  createGetAvailableTerminalsHandler,
+  createGetDefaultTerminalHandler,
+  createRefreshTerminalsHandler,
+  createOpenInExternalTerminalHandler,
+} from './routes/open-in-terminal.js';
 import { createInitGitHandler } from './routes/init-git.js';
 import { createMigrateHandler } from './routes/migrate.js';
 import { createStartDevHandler } from './routes/start-dev.js';
@@ -97,9 +104,25 @@ export function createWorktreeRoutes(
   );
   router.post('/switch-branch', requireValidWorktree, createSwitchBranchHandler());
   router.post('/open-in-editor', validatePathParams('worktreePath'), createOpenInEditorHandler());
+  router.post(
+    '/open-in-terminal',
+    validatePathParams('worktreePath'),
+    createOpenInTerminalHandler()
+  );
   router.get('/default-editor', createGetDefaultEditorHandler());
   router.get('/available-editors', createGetAvailableEditorsHandler());
   router.post('/refresh-editors', createRefreshEditorsHandler());
+
+  // External terminal routes
+  router.get('/available-terminals', createGetAvailableTerminalsHandler());
+  router.get('/default-terminal', createGetDefaultTerminalHandler());
+  router.post('/refresh-terminals', createRefreshTerminalsHandler());
+  router.post(
+    '/open-in-external-terminal',
+    validatePathParams('worktreePath'),
+    createOpenInExternalTerminalHandler()
+  );
+
   router.post('/init-git', validatePathParams('projectPath'), createInitGitHandler());
   router.post('/migrate', createMigrateHandler());
   router.post(

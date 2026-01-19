@@ -311,3 +311,6 @@ export { EVENT_HISTORY_VERSION, DEFAULT_EVENT_HISTORY_INDEX } from './event-hist
 // Worktree and PR types
 export type { PRState, WorktreePRInfo } from './worktree.js';
 export { PR_STATES, validatePRState } from './worktree.js';
+
+// Terminal types
+export type { TerminalInfo } from './terminal.js';
