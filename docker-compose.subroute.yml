@@ -1,0 +1,87 @@
+# Automaker Docker Compose - Subroute Deployment
+# Deploys Automaker at /automaker/ path behind existing ldcs-nginx
+#
+# Usage:
+#   docker compose -f docker-compose.subroute.yml up -d --build
+#   Then open http://49.12.144.8/automaker
+#
+# Requires: Add automaker location to /opt/ldcs/nginx/nginx.conf
+
+services:
+  # Frontend UI with subroute configuration
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ui
+      args:
+        VITE_BASE_PATH: /automaker/
+        # Set server URL to subroute so API calls go to /automaker/api/
+        VITE_SERVER_URL: /automaker
+    container_name: automaker-ui
+    restart: unless-stopped
+    # Not exposed externally - accessed via ldcs-nginx proxy
+    expose:
+      - '80'
+    depends_on:
+      - server
+    volumes:
+      # Override nginx config for subroute serving
+      - ./apps/ui/nginx.subroute.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - dmc-network
+      - default
+
+  # Backend API Server
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+      args:
+        UID: ${UID:-1001}
+        GID: ${GID:-1001}
+    container_name: automaker-server
+    restart: unless-stopped
+    expose:
+      - '3008'
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLAUDE_OAUTH_CREDENTIALS=${CLAUDE_OAUTH_CREDENTIALS:-}
+      - CURSOR_AUTH_TOKEN=${CURSOR_AUTH_TOKEN:-}
+      - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
+      - ALLOWED_ROOT_DIRECTORY=${ALLOWED_ROOT_DIRECTORY:-/projects}
+      - DATA_DIR=/data
+      # Allow CORS from the public IP
+      - CORS_ORIGIN=http://49.12.144.8
+      - IS_CONTAINERIZED=true
+    volumes:
+      - automaker-data:/data
+      - automaker-claude-config:/home/automaker/.claude
+      - automaker-cursor-config:/home/automaker/.cursor
+      - automaker-opencode-data:/home/automaker/.local/share/opencode
+      - automaker-opencode-config:/home/automaker/.config/opencode
+      - automaker-opencode-cache:/home/automaker/.cache/opencode
+    networks:
+      - dmc-network
+      - default
+
+networks:
+  dmc-network:
+    external: true
+  default:
+    driver: bridge
+
+volumes:
+  automaker-data:
+    name: automaker-data
+  automaker-claude-config:
+    name: automaker-claude-config
+  automaker-cursor-config:
+    name: automaker-cursor-config
+  automaker-opencode-data:
+    name: automaker-opencode-data
+  automaker-opencode-config:
+    name: automaker-opencode-config
+  automaker-opencode-cache:
+    name: automaker-opencode-cache

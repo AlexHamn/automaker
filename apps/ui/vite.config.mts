@@ -20,6 +20,7 @@ export default defineConfig(({ command }) => {
     command === 'serve' && (process.env.CI === 'true' || process.env.VITE_SKIP_ELECTRON === 'true');
 
   return {
+    base: process.env.VITE_BASE_PATH || '/',
     plugins: [
       // Only include electron plugin when not in CI/headless dev mode
       ...(skipElectron

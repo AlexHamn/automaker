@@ -28,6 +28,7 @@ COPY libs/platform/package*.json ./libs/platform/
 COPY libs/model-resolver/package*.json ./libs/model-resolver/
 COPY libs/dependency-resolver/package*.json ./libs/dependency-resolver/
 COPY libs/git-utils/package*.json ./libs/git-utils/
+COPY libs/spec-parser/package*.json ./libs/spec-parser/
 
 # Copy scripts (needed by npm workspace)
 COPY scripts ./scripts
@@ -200,8 +201,11 @@ COPY apps/ui ./apps/ui
 # VITE_SERVER_URL tells the UI where to find the API server
 # Use ARG to allow overriding at build time: --build-arg VITE_SERVER_URL=http://api.example.com
 ARG VITE_SERVER_URL=http://localhost:3008
+# VITE_BASE_PATH sets the base path for the UI (e.g., /automaker/ for subroute deployment)
+ARG VITE_BASE_PATH=/
 ENV VITE_SKIP_ELECTRON=true
 ENV VITE_SERVER_URL=${VITE_SERVER_URL}
+ENV VITE_BASE_PATH=${VITE_BASE_PATH}
 RUN npm run build:packages && npm run build --workspace=apps/ui
 
 # =============================================================================
