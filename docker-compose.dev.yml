@@ -64,11 +64,13 @@ services:
       # This ensures data is consistent across Electron and web modes
       - ./data:/data
 
+      # Mount local ./projects directory for project data
+      # This stores kanban boards, features, specs, context, and ideas
+      - ./projects:/projects
+
       # Persist CLI configurations
       - automaker-claude-config:/home/automaker/.claude
       - automaker-cursor-config:/home/automaker/.cursor
-
-      # Note: Workspace mount (/projects) comes from docker-compose.override.yml
 
     # Install deps, build packages, then start server in watch mode
     # Note: We override the entrypoint to handle permissions properly

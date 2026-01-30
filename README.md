@@ -260,9 +260,18 @@ docker-compose down
 
 Automaker integrates with your authenticated Claude Code CLI. To use CLI authentication in Docker, mount your Claude CLI config directory (see [Claude CLI Authentication](#claude-cli-authentication) below).
 
+##### Data Persistence
+
+All data persists across container rebuilds in Docker-managed named volumes:
+
+- `automaker-projects` - All project data (kanban boards, features, specs, context)
+- `automaker-data` - Global settings, credentials, session metadata
+
+See [docs/docker-isolation.md](docs/docker-isolation.md) for volume management and backup instructions.
+
 ##### Working with Projects (Host Directory Access)
 
-By default, the container is isolated from your host filesystem. To work on projects from your host machine, create a `docker-compose.override.yml` file (gitignored):
+By default, the container is isolated from your host filesystem. Projects created inside the container persist in the `automaker-projects` volume. To work on projects from your host machine instead, create a `docker-compose.override.yml` file (gitignored):
 
 ```yaml
 services:

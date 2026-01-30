@@ -58,6 +58,7 @@ services:
       - IS_CONTAINERIZED=true
     volumes:
       - automaker-data:/data
+      - automaker-projects:/projects
       - automaker-claude-config:/home/automaker/.claude
       - automaker-cursor-config:/home/automaker/.cursor
       - automaker-opencode-data:/home/automaker/.local/share/opencode
@@ -74,6 +75,8 @@ networks:
     driver: bridge
 
 volumes:
+  automaker-projects:
+    name: automaker-projects
   automaker-data:
     name: automaker-data
   automaker-claude-config:

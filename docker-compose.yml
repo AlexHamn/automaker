@@ -75,6 +75,10 @@ services:
       # This volume persists data between restarts but is container-managed
       - automaker-data:/data
 
+      # Persist projects directory across container rebuilds
+      # This stores all project data (kanban boards, features, specs, context, ideas)
+      - automaker-projects:/projects
+
       # Persist Claude CLI OAuth session keys across container restarts
       # This allows 'claude login' authentication to persist between restarts
       - automaker-claude-config:/home/automaker/.claude
@@ -103,6 +107,11 @@ services:
     # Security: No host filesystem mounts
 
 volumes:
+  automaker-projects:
+    name: automaker-projects
+    # Named volume for all project data (kanban boards, features, specs, context, ideas)
+    # Persists across container rebuilds
+
   automaker-data:
     name: automaker-data
     # Named volume - completely isolated from host filesystem
