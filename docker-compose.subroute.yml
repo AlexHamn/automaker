@@ -50,6 +50,7 @@ services:
       - CLAUDE_OAUTH_CREDENTIALS=${CLAUDE_OAUTH_CREDENTIALS:-}
       - CURSOR_AUTH_TOKEN=${CURSOR_AUTH_TOKEN:-}
       - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
+      - GH_TOKEN=${GH_TOKEN:-}
       - ALLOWED_ROOT_DIRECTORY=${ALLOWED_ROOT_DIRECTORY:-/projects}
       - DATA_DIR=/data
       # Allow CORS from the public IP
