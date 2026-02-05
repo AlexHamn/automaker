@@ -54,7 +54,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "rebuild": "rm -rf node_modules apps/*/node_modules libs/*/node_modules && npm install",
-    "prepare": "husky && npm run build:packages"
+    "prepare": "husky && npm run build:packages",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "convex:generate": "convex codegen"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md,html,yml,yaml}": [
@@ -67,6 +70,8 @@
     "tree-kill": "1.2.2"
   },
   "devDependencies": {
+    "@convex-dev/rag": "^0.7.0",
+    "convex": "^1.31.7",
     "husky": "9.1.7",
     "lint-staged": "16.2.7",
     "prettier": "3.7.4",

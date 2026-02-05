@@ -83,6 +83,7 @@ import { createNotificationsRoutes } from './routes/notifications/index.js';
 import { getNotificationService } from './services/notification-service.js';
 import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
+import { getConvexRAGService } from './services/convex-rag-service.js';
 
 // Load environment variables
 dotenv.config();
@@ -287,6 +288,18 @@ eventHookService.initialize(events, settingsService, eventHistoryService, featur
 
   await agentService.initialize();
   logger.info('Agent service initialized');
+
+  // Initialize Convex RAG service
+  const ragService = getConvexRAGService();
+  if (ragService.isEnabled()) {
+    if (ragService.isAvailable()) {
+      logger.info('Convex RAG service initialized');
+    } else {
+      logger.warn('Convex RAG service enabled but not configured (CONVEX_URL not set)');
+    }
+  } else {
+    logger.info('Convex RAG service disabled');
+  }
 
   // Bootstrap Codex model cache in background (don't block server startup)
   void codexModelCacheService.getModels().catch((err) => {

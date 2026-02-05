@@ -89,6 +89,9 @@ docker-compose.override.yml
 pnpm-lock.yaml
 yarn.lock
 
+# Convex generated files
+convex/_generated/
+
 # Fork-specific workflow files (should never be committed)
 # API key files
 data/.api-key

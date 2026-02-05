@@ -24,6 +24,7 @@
     "test:unit": "vitest run tests/unit"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.25",
     "@anthropic-ai/claude-agent-sdk": "0.1.76",
     "@automaker/dependency-resolver": "1.0.0",
     "@automaker/git-utils": "1.0.0",
@@ -34,6 +35,7 @@
     "@automaker/utils": "1.0.0",
     "@modelcontextprotocol/sdk": "1.25.2",
     "@openai/codex-sdk": "^0.77.0",
+    "convex": "^1.31.7",
     "cookie-parser": "1.4.7",
     "cors": "2.8.5",
     "dotenv": "17.2.3",
