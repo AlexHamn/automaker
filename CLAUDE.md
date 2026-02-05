@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Deployment Environment
+
+This project is deployed on a CentOS server. The app is running in Docker containers (`automaker-server` and `automaker-ui`) at `http://49.12.144.8/automaker`. The API key for web login is stored inside the server container at `/data/.api-key`.
+
 ## Project Overview
 
 Automaker is an autonomous AI development studio built as an npm workspace monorepo. It provides a Kanban-based workflow where AI agents (powered by Claude Agent SDK) implement features in isolated git worktrees.
