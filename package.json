@@ -57,7 +57,8 @@
     "prepare": "husky && npm run build:packages",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
-    "convex:generate": "convex codegen"
+    "convex:generate": "convex codegen",
+    "rag:index": "tsx scripts/rag-index.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md,html,yml,yaml}": [

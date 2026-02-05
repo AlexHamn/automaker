@@ -6,18 +6,18 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 ## Epic Overview
 
-| Epic | Title | Priority | Dependency |
-|------|-------|----------|------------|
-| **E1** | Convex Infrastructure Setup | P0 | None |
-| **E2** | Context & Memory File Indexing | P0 | E1 |
-| **E3** | Semantic Search Integration | P0 | E2 |
-| **E4** | Feature Output Indexing | P1 | E3 |
-| **E5** | Similar Implementation Search | P1 | E4 |
-| **E6** | Gotcha Detection System | P1 | E4 |
-| **E7** | Knowledge Base UI | P2 | E4 |
-| **E8** | Codebase Pattern Indexing | P2 | E3 |
-| **E9** | Incremental Re-indexing | P2 | E4 |
-| **E10** | Cross-Feature Learning | P3 | E6, E9 |
+| Epic    | Title                          | Priority | Dependency |
+| ------- | ------------------------------ | -------- | ---------- |
+| **E1**  | Convex Infrastructure Setup    | P0       | None       |
+| **E2**  | Context & Memory File Indexing | P0       | E1         |
+| **E3**  | Semantic Search Integration    | P0       | E2         |
+| **E4**  | Feature Output Indexing        | P1       | E3         |
+| **E5**  | Similar Implementation Search  | P1       | E4         |
+| **E6**  | Gotcha Detection System        | P1       | E4         |
+| **E7**  | Knowledge Base UI              | P2       | E4         |
+| **E8**  | Codebase Pattern Indexing      | P2       | E3         |
+| **E9**  | Incremental Re-indexing        | P2       | E4         |
+| **E10** | Cross-Feature Learning         | P3       | E6, E9     |
 
 ---
 
@@ -35,14 +35,16 @@ This document breaks down the Convex RAG implementation into actionable epics wi
   - Configure deployment environment (dev/prod)
 
 - [ ] **E1.2** Install dependencies
+
   ```bash
   npm install @convex-dev/rag convex @ai-sdk/openai
   ```
 
 - [ ] **E1.3** Create `convex/convex.config.ts`
+
   ```typescript
-  import { defineApp } from "convex/server";
-  import rag from "@convex-dev/rag/convex.config.js";
+  import { defineApp } from 'convex/server';
+  import rag from '@convex-dev/rag/convex.config.js';
 
   const app = defineApp();
   app.use(rag);
@@ -82,15 +84,15 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/convex.config.ts` | Create |
-| `convex/schema.ts` | Create |
-| `convex/rag.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Create |
-| `apps/server/src/index.ts` | Modify (add health check) |
-| `package.json` | Modify (add scripts) |
-| `.env.example` | Modify (add vars) |
+| File                                             | Action                    |
+| ------------------------------------------------ | ------------------------- |
+| `convex/convex.config.ts`                        | Create                    |
+| `convex/schema.ts`                               | Create                    |
+| `convex/rag.ts`                                  | Create                    |
+| `apps/server/src/services/convex-rag-service.ts` | Create                    |
+| `apps/server/src/index.ts`                       | Modify (add health check) |
+| `package.json`                                   | Modify (add scripts)      |
+| `.env.example`                                   | Modify (add vars)         |
 
 ---
 
@@ -98,70 +100,77 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 **Goal**: Index `.automaker/context/` and `.automaker/memory/` files into Convex RAG.
 
+**Status**: ✅ Completed
+
 #### Tasks
 
-- [ ] **E2.1** Create `convex/indexing/contextFiles.ts`
+- [x] **E2.1** Create `convex/indexing.ts` (combined context/memory indexing)
   - `indexContextFile` action
   - Accept projectId, filePath, content, title, description
   - Use namespace pattern: `project:{projectId}`
   - Use key pattern: `context:{filePath}`
 
-- [ ] **E2.2** Create `convex/indexing/memoryFiles.ts`
+- [x] **E2.2** Create `indexMemoryFile` action in `convex/indexing.ts`
   - `indexMemoryFile` action
   - Parse YAML frontmatter for tags, importance, summary
   - Enrich content with tags for better embedding
   - Set importance weighting (0-1)
 
-- [ ] **E2.3** Create file loading utilities
-  - `loadContextFilesFromDisk(contextDir)` - Read all .md/.txt files
-  - `loadMemoryFilesFromDisk(memoryDir)` - Read with frontmatter parsing
-  - `computeFileChecksum(content)` - For change detection
+- [x] **E2.3** Create file loading utilities
+  - `computeChecksum(content)` in `apps/server/src/lib/file-utils.ts`
+  - `getProjectId(projectPath)` in `apps/server/src/lib/file-utils.ts`
+  - File loading via `secureFs` from `@automaker/platform`
 
-- [ ] **E2.4** Implement checksum-based change detection
+- [x] **E2.4** Implement checksum-based change detection
   - Store checksums in `indexedContent` table
-  - Skip re-indexing unchanged files
+  - Skip re-indexing unchanged files via `needsReindexing()` method
   - Track `lastIndexed` timestamp
 
-- [ ] **E2.5** Add `indexContextFiles` method to `ConvexRAGService`
-  - Load files from disk
+- [x] **E2.5** Add `indexProject` method to `ConvexRAGService`
+  - Load files from disk using `secureFs`
   - Check for changes via checksum
   - Call Convex actions for changed files
   - Update `indexedContent` metadata
 
-- [ ] **E2.6** Add `indexMemoryFiles` method to `ConvexRAGService`
-  - Parse frontmatter metadata
-  - Map importance scores
+- [x] **E2.6** Add `indexMemoryFile` method to `ConvexRAGService`
+  - Parse frontmatter metadata via `parseFrontmatter()` from `@automaker/utils`
+  - Map importance scores from frontmatter
   - Handle missing/malformed frontmatter gracefully
 
-- [ ] **E2.7** Create CLI command: `npm run rag:index`
-  - Accept `--project` flag for project path
+- [x] **E2.7** Create CLI command: `npm run rag:index`
+  - Accept project path as argument
   - Index both context and memory files
-  - Display progress and results
+  - Display progress and results with legend
 
-- [ ] **E2.8** Add indexing on project open
-  - Hook into project loading in server
-  - Trigger background indexing for opened project
-  - Show indexing status in UI
+- [x] **E2.8** Add indexing on project open
+  - Hook into feature list endpoint (`/api/features/list`)
+  - Trigger background indexing via `indexProjectIfStale()`
+  - 5-minute cooldown per project to avoid repeated indexing
 
 #### Acceptance Criteria
 
-- [ ] All `.automaker/context/*.md` files indexed with correct namespace
-- [ ] All `.automaker/memory/*.md` files indexed with importance scores
-- [ ] Re-running index skips unchanged files
-- [ ] CLI command shows progress and success count
-- [ ] Logs show embedding token usage
+- [x] All `.automaker/context/*.md` files indexed with correct namespace
+- [x] All `.automaker/memory/*.md` files indexed with importance scores
+- [x] Re-running index skips unchanged files
+- [x] CLI command shows progress and success count
+- [ ] Logs show embedding token usage (tracked by Convex/OpenAI)
 
-#### Files to Create/Modify
+#### Files Created/Modified
 
-| File | Action |
-|------|--------|
-| `convex/indexing/contextFiles.ts` | Create |
-| `convex/indexing/memoryFiles.ts` | Create |
-| `convex/indexing/utils.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Modify |
-| `apps/server/src/lib/file-utils.ts` | Modify (add checksum) |
-| `scripts/rag-index.ts` | Create |
-| `package.json` | Modify (add script) |
+| File                                                                  | Action                                    |
+| --------------------------------------------------------------------- | ----------------------------------------- |
+| `convex/indexing.ts`                                                  | Created (combined context/memory actions) |
+| `apps/server/src/lib/file-utils.ts`                                   | Created (checksum + project ID)           |
+| `apps/server/src/services/convex-rag-service.ts`                      | Modified (added indexing methods)         |
+| `apps/server/src/routes/rag/index.ts`                                 | Created (RAG routes)                      |
+| `apps/server/src/routes/rag/routes/index-project.ts`                  | Created (POST /api/rag/index)             |
+| `apps/server/src/routes/rag/routes/status.ts`                         | Created (POST /api/rag/status)            |
+| `apps/server/src/routes/features/routes/list.ts`                      | Modified (auto-index trigger)             |
+| `apps/server/src/index.ts`                                            | Modified (mount RAG routes)               |
+| `scripts/rag-index.ts`                                                | Created                                   |
+| `package.json`                                                        | Modified (add `rag:index` script)         |
+| `apps/server/tests/unit/lib/file-utils.test.ts`                       | Created (unit tests)                      |
+| `apps/server/tests/unit/services/convex-rag-service-indexing.test.ts` | Created (unit tests)                      |
 
 ---
 
@@ -218,14 +227,14 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/search/featureContext.ts` | Create |
-| `convex/search/index.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Modify |
-| `libs/utils/src/context-loader.ts` | Modify |
-| `apps/server/src/services/agent-service.ts` | Modify |
-| `apps/server/src/lib/config.ts` | Modify (add flag) |
+| File                                             | Action            |
+| ------------------------------------------------ | ----------------- |
+| `convex/search/featureContext.ts`                | Create            |
+| `convex/search/index.ts`                         | Create            |
+| `apps/server/src/services/convex-rag-service.ts` | Modify            |
+| `libs/utils/src/context-loader.ts`               | Modify            |
+| `apps/server/src/services/agent-service.ts`      | Modify            |
+| `apps/server/src/lib/config.ts`                  | Modify (add flag) |
 
 ---
 
@@ -279,13 +288,13 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/indexing/featureOutputs.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Modify |
-| `apps/server/src/services/agent-service.ts` | Modify |
-| `scripts/rag-backfill.ts` | Create |
-| `package.json` | Modify (add script) |
+| File                                             | Action              |
+| ------------------------------------------------ | ------------------- |
+| `convex/indexing/featureOutputs.ts`              | Create              |
+| `apps/server/src/services/convex-rag-service.ts` | Modify              |
+| `apps/server/src/services/agent-service.ts`      | Modify              |
+| `scripts/rag-backfill.ts`                        | Create              |
+| `package.json`                                   | Modify (add script) |
 
 ---
 
@@ -337,14 +346,14 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/search/similarImplementations.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Modify |
-| `apps/server/src/routes/rag.ts` | Create |
+| File                                                         | Action |
+| ------------------------------------------------------------ | ------ |
+| `convex/search/similarImplementations.ts`                    | Create |
+| `apps/server/src/services/convex-rag-service.ts`             | Modify |
+| `apps/server/src/routes/rag.ts`                              | Create |
 | `apps/ui/src/components/features/SimilarImplementations.tsx` | Create |
-| `apps/ui/src/hooks/useSimilarImplementations.ts` | Create |
-| `libs/prompts/src/enhancement.ts` | Modify |
+| `apps/ui/src/hooks/useSimilarImplementations.ts`             | Create |
+| `libs/prompts/src/enhancement.ts`                            | Modify |
 
 ---
 
@@ -401,15 +410,15 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/search/gotchas.ts` | Create |
-| `convex/search/pastFailures.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Modify |
-| `apps/server/src/routes/rag.ts` | Modify |
+| File                                                 | Action |
+| ---------------------------------------------------- | ------ |
+| `convex/search/gotchas.ts`                           | Create |
+| `convex/search/pastFailures.ts`                      | Create |
+| `apps/server/src/services/convex-rag-service.ts`     | Modify |
+| `apps/server/src/routes/rag.ts`                      | Modify |
 | `apps/ui/src/components/features/GotchaWarnings.tsx` | Create |
 | `apps/ui/src/components/features/ExecutionModal.tsx` | Modify |
-| `libs/prompts/src/agent-system.ts` | Modify |
+| `libs/prompts/src/agent-system.ts`                   | Modify |
 
 ---
 
@@ -476,15 +485,15 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/queries/stats.ts` | Create |
-| `apps/server/src/routes/rag.ts` | Modify |
-| `apps/ui/src/routes/knowledge-base.tsx` | Create |
-| `apps/ui/src/components/knowledge-base/StatsCard.tsx` | Create |
-| `apps/ui/src/components/knowledge-base/ContentBrowser.tsx` | Create |
+| File                                                        | Action |
+| ----------------------------------------------------------- | ------ |
+| `convex/queries/stats.ts`                                   | Create |
+| `apps/server/src/routes/rag.ts`                             | Modify |
+| `apps/ui/src/routes/knowledge-base.tsx`                     | Create |
+| `apps/ui/src/components/knowledge-base/StatsCard.tsx`       | Create |
+| `apps/ui/src/components/knowledge-base/ContentBrowser.tsx`  | Create |
 | `apps/ui/src/components/knowledge-base/SearchInterface.tsx` | Create |
-| `apps/ui/src/hooks/useKnowledgeBase.ts` | Create |
+| `apps/ui/src/hooks/useKnowledgeBase.ts`                     | Create |
 
 ---
 
@@ -543,14 +552,14 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/indexing/codePatterns.ts` | Create |
-| `convex/search/codePatterns.ts` | Create |
+| File                                                 | Action |
+| ---------------------------------------------------- | ------ |
+| `convex/indexing/codePatterns.ts`                    | Create |
+| `convex/search/codePatterns.ts`                      | Create |
 | `apps/server/src/services/code-pattern-extractor.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Modify |
-| `scripts/rag-index-code.ts` | Create |
-| `libs/prompts/src/agent-system.ts` | Modify |
+| `apps/server/src/services/convex-rag-service.ts`     | Modify |
+| `scripts/rag-index-code.ts`                          | Create |
+| `libs/prompts/src/agent-system.ts`                   | Modify |
 
 ---
 
@@ -607,13 +616,13 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/mutations/incrementalIndex.ts` | Create |
-| `convex/scheduled/staleContentCheck.ts` | Create |
+| File                                               | Action |
+| -------------------------------------------------- | ------ |
+| `convex/mutations/incrementalIndex.ts`             | Create |
+| `convex/scheduled/staleContentCheck.ts`            | Create |
 | `apps/server/src/services/file-watcher-service.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Modify |
-| `apps/server/src/routes/health.ts` | Modify |
+| `apps/server/src/services/convex-rag-service.ts`   | Modify |
+| `apps/server/src/routes/health.ts`                 | Modify |
 
 ---
 
@@ -676,14 +685,14 @@ This document breaks down the Convex RAG implementation into actionable epics wi
 
 #### Files to Create/Modify
 
-| File | Action |
-|------|--------|
-| `convex/indexing/learnings.ts` | Create |
-| `convex/search/riskAssessment.ts` | Create |
-| `apps/server/src/services/learning-extractor.ts` | Create |
-| `apps/server/src/services/risk-analyzer.ts` | Create |
-| `apps/server/src/services/convex-rag-service.ts` | Modify |
-| `apps/server/src/routes/rag.ts` | Modify |
+| File                                                | Action |
+| --------------------------------------------------- | ------ |
+| `convex/indexing/learnings.ts`                      | Create |
+| `convex/search/riskAssessment.ts`                   | Create |
+| `apps/server/src/services/learning-extractor.ts`    | Create |
+| `apps/server/src/services/risk-analyzer.ts`         | Create |
+| `apps/server/src/services/convex-rag-service.ts`    | Modify |
+| `apps/server/src/routes/rag.ts`                     | Modify |
 | `apps/ui/src/components/features/RiskIndicator.tsx` | Create |
 | `apps/ui/src/components/reports/LearningReport.tsx` | Create |
 
@@ -722,11 +731,13 @@ E1 (Infrastructure)
 ### Milestone 1: RAG Foundation (Epics E1-E3)
 
 **Deliverables**:
+
 - Convex backend operational
 - Context and memory files indexed
 - Semantic search integrated into agent prompts
 
 **Success Criteria**:
+
 - Agent receives semantically relevant context
 - Fallback works when RAG unavailable
 - <500ms search latency
@@ -734,11 +745,13 @@ E1 (Infrastructure)
 ### Milestone 2: Feature Intelligence (Epics E4-E6)
 
 **Deliverables**:
+
 - Automatic feature output indexing
 - Similar implementation discovery
 - Pre-execution gotcha warnings
 
 **Success Criteria**:
+
 - All new features auto-indexed
 - Similar features surfaced in planning
 - Gotchas displayed before execution
@@ -746,11 +759,13 @@ E1 (Infrastructure)
 ### Milestone 3: User Experience (Epics E7-E9)
 
 **Deliverables**:
+
 - Knowledge base management UI
 - Codebase pattern indexing
 - Automatic incremental re-indexing
 
 **Success Criteria**:
+
 - Users can browse/search all indexed content
 - Code patterns inform agent context
 - No manual re-indexing required
@@ -758,11 +773,13 @@ E1 (Infrastructure)
 ### Milestone 4: Predictive Intelligence (Epic E10)
 
 **Deliverables**:
+
 - Automated learning extraction
 - Feature risk assessment
 - Learning reports
 
 **Success Criteria**:
+
 - Risk scores correlate with outcomes
 - Learnings improve agent performance
 - Reports provide actionable insights
@@ -773,21 +790,21 @@ E1 (Infrastructure)
 
 ### Convex Limits to Consider
 
-| Limit | Value | Mitigation |
-|-------|-------|------------|
-| Vector dimensions | 2-4096 | Use 1536 (OpenAI default) |
-| Results per search | Max 256 | Paginate if needed |
-| Filter fields | Max 16 | Consolidate filters |
-| Function timeout | 60s | Batch large operations |
+| Limit              | Value   | Mitigation                |
+| ------------------ | ------- | ------------------------- |
+| Vector dimensions  | 2-4096  | Use 1536 (OpenAI default) |
+| Results per search | Max 256 | Paginate if needed        |
+| Filter fields      | Max 16  | Consolidate filters       |
+| Function timeout   | 60s     | Batch large operations    |
 
 ### Performance Targets
 
-| Operation | Target Latency |
-|-----------|---------------|
-| Single file index | <2s |
-| Context search | <500ms |
-| Similar implementation search | <1s |
-| Full project re-index | <5min (100 files) |
+| Operation                     | Target Latency    |
+| ----------------------------- | ----------------- |
+| Single file index             | <2s               |
+| Context search                | <500ms            |
+| Similar implementation search | <1s               |
+| Full project re-index         | <5min (100 files) |
 
 ### Error Handling Strategy
 

@@ -84,6 +84,7 @@ import { getNotificationService } from './services/notification-service.js';
 import { createEventHistoryRoutes } from './routes/event-history/index.js';
 import { getEventHistoryService } from './services/event-history-service.js';
 import { getConvexRAGService } from './services/convex-rag-service.js';
+import { createRAGRoutes } from './routes/rag/index.js';
 
 // Load environment variables
 dotenv.config();
@@ -357,6 +358,7 @@ app.use('/api/pipeline', createPipelineRoutes(pipelineService));
 app.use('/api/ideation', createIdeationRoutes(events, ideationService, featureLoader));
 app.use('/api/notifications', createNotificationsRoutes(notificationService));
 app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
+app.use('/api/rag', createRAGRoutes());
 
 // Create HTTP server
 const server = createServer(app);
