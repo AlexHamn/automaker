@@ -99,7 +99,7 @@ ${spec}
 ${existingFeaturesContext}
 ${prompts.appSpec.generateFeaturesFromSpecPrompt}
 
-Generate ${featureCount} NEW features that build on each other logically. Remember: ONLY generate features that DO NOT already exist.`;
+Generate ${featureCount} NEW features that form a connected dependency graph representing a realistic development progression. Remember: ONLY generate features that DO NOT already exist. Most features should depend on at least one other feature.`;
 
   logger.info('========== PROMPT BEING SENT ==========');
   logger.info(`Prompt length: ${prompt.length} chars`);

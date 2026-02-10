@@ -661,7 +661,7 @@ export const DEFAULT_APP_SPEC_STRUCTURED_INSTRUCTIONS = `Analyze the project and
 
 Be thorough in your analysis. The output will be automatically formatted as structured JSON.`;
 
-export const DEFAULT_GENERATE_FEATURES_FROM_SPEC_PROMPT = `Generate a prioritized list of implementable features. For each feature provide:
+export const DEFAULT_GENERATE_FEATURES_FROM_SPEC_PROMPT = `Generate a prioritized list of implementable features that form a realistic development progression. For each feature provide:
 
 1. **id**: A unique lowercase-hyphenated identifier
 2. **category**: Functional category (e.g., "Core", "UI", "API", "Authentication", "Database")
@@ -669,30 +669,66 @@ export const DEFAULT_GENERATE_FEATURES_FROM_SPEC_PROMPT = `Generate a prioritize
 4. **description**: What this feature does (2-3 sentences)
 5. **priority**: 1 (high), 2 (medium), or 3 (low)
 6. **complexity**: "simple", "moderate", or "complex"
-7. **dependencies**: Array of feature IDs this depends on (can be empty)
+7. **dependencies**: Array of feature IDs this feature depends on
+
+## DEPENDENCY RULES (CRITICAL)
+
+Features MUST form a realistic, incremental development plan — like a real engineering team would build the project. Follow these rules:
+
+1. **Layer your features in development order:**
+   - **Foundation** (0 dependencies): Project setup, data models, core configuration, base utilities. Only 2-4 features should be foundational with no dependencies.
+   - **Core Logic** (depends on foundation): Business logic, services, state management, core algorithms.
+   - **API/Integration** (depends on core logic): API endpoints, external service integrations, data persistence.
+   - **UI/Presentation** (depends on API + core): User-facing components, pages, forms, layouts.
+   - **Polish/Enhancement** (depends on UI + core): Advanced features, optimizations, error handling, accessibility.
+
+2. **Every non-foundational feature MUST have at least one dependency.** A UI feature that displays data must depend on the feature that provides that data. An API endpoint must depend on the data model it serves.
+
+3. **Think about what must exist before each feature can work.** Ask: "What other features from this list would need to be built first for this feature to function?" Those are the dependencies.
+
+4. **The dependency graph should have no more than 2-4 root nodes** (features with zero dependencies). Everything else should connect into the graph.
+
+5. **Dependencies reference IDs of other features in this same list.** Ensure every dependency ID matches an actual feature ID you are generating.
 
 Format as JSON:
 {
   "features": [
     {
-      "id": "feature-id",
-      "category": "Feature Category",
-      "title": "Feature Title",
-      "description": "What it does",
+      "id": "data-models",
+      "category": "Core",
+      "title": "Core Data Models",
+      "description": "Define the foundational data models and schemas used throughout the application.",
       "priority": 1,
       "complexity": "moderate",
       "dependencies": []
+    },
+    {
+      "id": "api-endpoints",
+      "category": "API",
+      "title": "REST API Endpoints",
+      "description": "Implement the API layer for CRUD operations on core entities.",
+      "priority": 1,
+      "complexity": "moderate",
+      "dependencies": ["data-models"]
+    },
+    {
+      "id": "main-dashboard",
+      "category": "UI",
+      "title": "Main Dashboard View",
+      "description": "Build the primary dashboard UI that displays data from the API.",
+      "priority": 1,
+      "complexity": "complex",
+      "dependencies": ["api-endpoints", "data-models"]
     }
   ]
 }
-
-Generate features that build on each other logically.
 
 CRITICAL RULES:
 - If an "EXISTING FEATURES" section is provided above, you MUST NOT generate any features that duplicate or overlap with those existing features
 - Check each feature you generate against the existing features list - if it already exists, DO NOT include it
 - Only generate truly NEW features that add value beyond what already exists
 - Generate unique IDs that don't conflict with existing feature IDs
+- When existing features are present, new features may depend on existing feature IDs
 
 IMPORTANT: Do not ask for clarification. The specification is provided above. Generate the JSON immediately.`;
 
