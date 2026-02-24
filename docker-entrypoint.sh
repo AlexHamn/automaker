@@ -70,5 +70,13 @@ EOF
     chown -R automaker:automaker /home/automaker/.config
 fi
 
+# Configure git user identity from environment variables
+if [ -n "$GIT_USER_NAME" ]; then
+    git config --system user.name "$GIT_USER_NAME"
+fi
+if [ -n "$GIT_USER_EMAIL" ]; then
+    git config --system user.email "$GIT_USER_EMAIL"
+fi
+
 # Switch to automaker user and execute the command
 exec gosu automaker "$@"

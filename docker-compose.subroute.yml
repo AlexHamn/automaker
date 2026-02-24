@@ -20,9 +20,9 @@ services:
         VITE_SERVER_URL: /automaker
     container_name: automaker-ui
     restart: unless-stopped
-    # Not exposed externally - accessed via ldcs-nginx proxy
-    expose:
-      - '80'
+    # Bind to localhost for host nginx to proxy to
+    ports:
+      - '127.0.0.1:3007:80'
     depends_on:
       - server
     volumes:
@@ -43,14 +43,17 @@ services:
         GID: ${GID:-1001}
     container_name: automaker-server
     restart: unless-stopped
-    expose:
-      - '3008'
+    # Bind to localhost for host nginx to proxy to
+    ports:
+      - '127.0.0.1:3008:3008'
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - CLAUDE_OAUTH_CREDENTIALS=${CLAUDE_OAUTH_CREDENTIALS:-}
       - CURSOR_AUTH_TOKEN=${CURSOR_AUTH_TOKEN:-}
       - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
       - GH_TOKEN=${GH_TOKEN:-}
+      - GIT_USER_NAME=${GIT_USER_NAME:-}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - ALLOWED_ROOT_DIRECTORY=${ALLOWED_ROOT_DIRECTORY:-/projects}
       - DATA_DIR=/data
       # Allow CORS from the public IP

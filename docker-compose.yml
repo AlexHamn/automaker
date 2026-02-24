@@ -52,6 +52,10 @@ services:
       # Note: cursor-agent stores its OAuth tokens separately from Cursor IDE
       - CURSOR_AUTH_TOKEN=${CURSOR_AUTH_TOKEN:-}
 
+      # Optional - Git user identity for commits
+      - GIT_USER_NAME=${GIT_USER_NAME:-}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
+
       # Optional - authentication, one will generate if left blank
       - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
 
