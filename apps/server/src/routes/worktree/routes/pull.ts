@@ -36,11 +36,17 @@ export function createPullHandler() {
       // Fetch latest from remote
       await execAsync('git fetch origin', { cwd: worktreePath });
 
-      // Check if there are local changes that would be overwritten
-      const { stdout: status } = await execAsync('git status --porcelain', {
+      // Check if there are tracked file changes that would conflict with pull
+      // Use -uno to ignore untracked files (they don't conflict with git pull)
+      const { stdout: status } = await execAsync('git status --porcelain -uno', {
         cwd: worktreePath,
       });
-      const hasLocalChanges = status.trim().length > 0;
+      // Filter out .automaker/ changes (internal metadata, not user code)
+      const conflictingChanges = status
+        .trim()
+        .split('\n')
+        .filter((line) => line.trim() && !line.includes('.automaker/'));
+      const hasLocalChanges = conflictingChanges.length > 0;
 
       if (hasLocalChanges) {
         res.status(400).json({
@@ -50,11 +56,27 @@ export function createPullHandler() {
         return;
       }
 
+      // Stash .automaker/ changes if any so they don't block git pull
+      const hasAutomakerChanges = status
+        .trim()
+        .split('\n')
+        .some((line) => line.trim() && line.includes('.automaker/'));
+      if (hasAutomakerChanges) {
+        await execAsync('git stash push -m "automaker-pull-stash" -- .automaker/', {
+          cwd: worktreePath,
+        });
+      }
+
       // Pull latest changes
       try {
         const { stdout: pullOutput } = await execAsync(`git pull origin ${branchName}`, {
           cwd: worktreePath,
         });
+
+        // Restore stashed .automaker/ changes
+        if (hasAutomakerChanges) {
+          await execAsync('git stash pop', { cwd: worktreePath }).catch(() => {});
+        }
 
         // Check if we pulled any changes
         const alreadyUpToDate = pullOutput.includes('Already up to date');
@@ -68,6 +90,10 @@ export function createPullHandler() {
           },
         });
       } catch (pullError: unknown) {
+        // Restore stashed .automaker/ changes even on failure
+        if (hasAutomakerChanges) {
+          await execAsync('git stash pop', { cwd: worktreePath }).catch(() => {});
+        }
         const err = pullError as { stderr?: string; message?: string };
         const errorMsg = err.stderr || err.message || 'Pull failed';
 

@@ -3078,19 +3078,30 @@ Format your response as a structured markdown document.`;
       // Apply dependency-aware ordering
       const { orderedFeatures, missingDependencies } = resolveDependencies(pendingFeatures);
 
-      // Remove missing dependencies from features and save them
-      // This allows features to proceed when their dependencies have been deleted or don't exist
+      // Remove truly missing dependencies (deleted features) from features and save them
+      // Only strip dependencies that point to features that no longer exist at all.
+      // Dependencies on completed/verified/in_progress features are valid and must be preserved
+      // to maintain the dependency graph structure.
       if (missingDependencies.size > 0) {
+        const allFeatureIds = new Set(allFeatures.map((f) => f.id));
+
         for (const [featureId, missingDepIds] of missingDependencies) {
+          // Only consider deps that are truly deleted (not in allFeatures at all)
+          const trulyMissingDepIds = missingDepIds.filter((depId) => !allFeatureIds.has(depId));
+
+          if (trulyMissingDepIds.length === 0) {
+            continue;
+          }
+
           const feature = pendingFeatures.find((f) => f.id === featureId);
           if (feature && feature.dependencies) {
-            // Filter out the missing dependency IDs
+            // Filter out only the truly missing dependency IDs
             const validDependencies = feature.dependencies.filter(
-              (depId) => !missingDepIds.includes(depId)
+              (depId) => !trulyMissingDepIds.includes(depId)
             );
 
             logger.warn(
-              `[loadPendingFeatures] Feature ${featureId} has missing dependencies: ${missingDepIds.join(', ')}. Removing them automatically.`
+              `[loadPendingFeatures] Feature ${featureId} has deleted dependencies: ${trulyMissingDepIds.join(', ')}. Removing them automatically.`
             );
 
             // Update the feature in memory
@@ -3102,11 +3113,11 @@ Format your response as a structured markdown document.`;
                 dependencies: feature.dependencies,
               });
               logger.info(
-                `[loadPendingFeatures] Updated feature ${featureId} - removed missing dependencies`
+                `[loadPendingFeatures] Updated feature ${featureId} - removed deleted dependencies`
               );
             } catch (error) {
               logger.error(
-                `[loadPendingFeatures] Failed to save feature ${featureId} after removing missing dependencies:`,
+                `[loadPendingFeatures] Failed to save feature ${featureId} after removing deleted dependencies:`,
                 error
               );
             }
