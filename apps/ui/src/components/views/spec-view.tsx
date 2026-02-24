@@ -16,7 +16,7 @@ import {
 } from './spec-view/components';
 
 // Extracted dialogs
-import { CreateSpecDialog, RegenerateSpecDialog } from './spec-view/dialogs';
+import { CreateSpecDialog, GenerateFeaturesDialog, RegenerateSpecDialog } from './spec-view/dialogs';
 
 // Types
 import type { SpecViewMode as SpecViewModeType } from './spec-view/types';
@@ -70,6 +70,10 @@ export function SpecView() {
     setFeatureCountOnRegenerate,
 
     // Feature generation
+    showGenerateFeaturesDialog,
+    setShowGenerateFeaturesDialog,
+    featureCountOnGenerate,
+    setFeatureCountOnGenerate,
     isGeneratingFeatures,
 
     // Sync
@@ -187,7 +191,7 @@ export function SpecView() {
         currentPhase={currentPhase || (isGenerationRunning ? 'working' : '')}
         errorMessage={errorMessage}
         onRegenerateClick={() => setShowRegenerateDialog(true)}
-        onGenerateFeaturesClick={handleGenerateFeatures}
+        onGenerateFeaturesClick={() => setShowGenerateFeaturesDialog(true)}
         onSyncClick={handleSync}
         onSaveClick={saveSpec}
         showActionsPanel={showActionsPanel}
@@ -234,6 +238,15 @@ export function SpecView() {
         onRegenerate={handleRegenerate}
         isRegenerating={isRegenerating}
         isGeneratingFeatures={isGeneratingFeatures}
+      />
+
+      <GenerateFeaturesDialog
+        open={showGenerateFeaturesDialog}
+        onOpenChange={setShowGenerateFeaturesDialog}
+        featureCount={featureCountOnGenerate}
+        onFeatureCountChange={setFeatureCountOnGenerate}
+        onGenerate={() => handleGenerateFeatures(featureCountOnGenerate)}
+        isGenerating={isGeneratingFeatures}
       />
     </div>
   );

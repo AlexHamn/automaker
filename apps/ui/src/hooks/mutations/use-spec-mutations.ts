@@ -120,13 +120,13 @@ export function useRegenerateSpec(projectPath: string) {
  */
 export function useGenerateFeatures(projectPath: string) {
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (maxFeatures?: number) => {
       const api = getElectronAPI();
       if (!api.specRegeneration) {
         throw new Error('Spec regeneration API not available');
       }
 
-      const result = await api.specRegeneration.generateFeatures(projectPath);
+      const result = await api.specRegeneration.generateFeatures(projectPath, maxFeatures);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to start feature generation');

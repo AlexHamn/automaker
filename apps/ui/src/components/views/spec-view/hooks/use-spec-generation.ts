@@ -42,11 +42,18 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
   const [analyzeProjectOnRegenerate, setAnalyzeProjectOnRegenerate] = useState(true);
   const [featureCountOnRegenerate, setFeatureCountOnRegenerate] = useState<FeatureCount>(50);
 
+  // Generate features dialog state
+  const [showGenerateFeaturesDialog, setShowGenerateFeaturesDialog] = useState(false);
+  const [featureCountOnGenerate, setFeatureCountOnGenerate] = useState<FeatureCount>(50);
+
   // Generate features only state
   const [isGeneratingFeatures, setIsGeneratingFeatures] = useState(false);
 
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Track current operation type so event handler knows what's running
+  const operationTypeRef = useRef<'none' | 'create' | 'regenerate' | 'generate_features' | 'sync'>('none');
 
   // Logs state (kept for internal tracking)
   const [logs, setLogs] = useState<string>('');
@@ -65,6 +72,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
     setIsRegenerating(false);
     setIsGeneratingFeatures(false);
     setIsSyncing(false);
+    operationTypeRef.current = 'none';
     setCurrentPhase('');
     setErrorMessage('');
     setLogs('');
@@ -162,6 +170,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
             setIsRegenerating(false);
             setIsGeneratingFeatures(false);
             setIsSyncing(false);
+            operationTypeRef.current = 'none';
             setCurrentPhase('');
             stateRestoredRef.current = false;
             loadSpec();
@@ -200,6 +209,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
           setIsRegenerating(false);
           setIsGeneratingFeatures(false);
           setIsSyncing(false);
+          operationTypeRef.current = 'none';
           setCurrentPhase('');
           stateRestoredRef.current = false;
           loadSpec();
@@ -259,8 +269,12 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
       }
 
       if (event.type === 'spec_regeneration_progress') {
-        setIsCreating(true);
-        setIsRegenerating(true);
+        // Only set creating/regenerating flags if the current operation is
+        // actually a spec creation or regeneration, not feature-only generation
+        if (operationTypeRef.current !== 'generate_features') {
+          setIsCreating(true);
+          setIsRegenerating(true);
+        }
 
         const phaseMatch = event.content.match(/\[Phase:\s*([^\]]+)\]/);
         if (phaseMatch) {
@@ -312,8 +326,11 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
         if (isFeatureTool) {
           if (currentPhase !== 'feature_generation') {
             setCurrentPhase('feature_generation');
-            setIsCreating(true);
-            setIsRegenerating(true);
+            // Only set creating/regenerating for spec operations, not feature-only generation
+            if (operationTypeRef.current !== 'generate_features') {
+              setIsCreating(true);
+              setIsRegenerating(true);
+            }
             logger.debug(
               '[useSpecGeneration] Detected feature creation tool - setting phase to feature_generation'
             );
@@ -337,9 +354,10 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
           event.message?.includes('All tasks completed') ||
           event.message === 'All tasks completed!' ||
           event.message === 'All tasks completed' ||
-          event.message === 'Spec regeneration complete!' ||
+          event.message?.includes('Spec regeneration complete') ||
           event.message === 'Initial spec creation complete!' ||
-          event.message?.includes('Spec sync complete');
+          event.message?.includes('Spec sync complete') ||
+          event.message?.includes('Feature generation complete');
 
         const hasCompletePhase = logsRef.current.includes('[Phase: complete]');
 
@@ -356,10 +374,12 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
             hasCompletePhase,
             message: event.message,
           });
+          const completedOperation = operationTypeRef.current;
           setIsRegenerating(false);
           setIsCreating(false);
           setIsGeneratingFeatures(false);
           setIsSyncing(false);
+          operationTypeRef.current = 'none';
           setCurrentPhase('');
           setShowRegenerateDialog(false);
           setShowCreateDialog(false);
@@ -372,9 +392,9 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
             loadSpec();
           }, SPEC_FILE_WRITE_DELAY);
 
-          const isSyncComplete = event.message?.includes('sync');
-          const isRegeneration = event.message?.includes('regeneration');
-          const isFeatureGeneration = event.message?.includes('Feature generation');
+          const isSyncComplete = event.message?.includes('sync') || completedOperation === 'sync';
+          const isRegeneration = event.message?.includes('regeneration') && completedOperation !== 'generate_features';
+          const isFeatureGeneration = event.message?.includes('Feature generation') || completedOperation === 'generate_features';
           toast.success(
             isSyncComplete
               ? 'Spec Sync Complete'
@@ -407,6 +427,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
         setIsCreating(false);
         setIsGeneratingFeatures(false);
         setIsSyncing(false);
+        operationTypeRef.current = 'none';
         setCurrentPhase('error');
         setErrorMessage(event.error);
         stateRestoredRef.current = false;
@@ -427,6 +448,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
     if (!currentProject || !projectOverview.trim()) return;
 
     setIsCreating(true);
+    operationTypeRef.current = 'create';
     setShowCreateDialog(false);
     setCurrentPhase('initialization');
     setErrorMessage('');
@@ -446,6 +468,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
           const errorMsg = error.message;
           logger.error('[useSpecGeneration] Failed to create spec:', errorMsg);
           setIsCreating(false);
+          operationTypeRef.current = 'none';
           setCurrentPhase('error');
           setErrorMessage(errorMsg);
           const errorLog = `[Error] Failed to create spec: ${errorMsg}\n`;
@@ -467,6 +490,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
     if (!currentProject || !projectDefinition.trim()) return;
 
     setIsRegenerating(true);
+    operationTypeRef.current = 'regenerate';
     setShowRegenerateDialog(false);
     setCurrentPhase('initialization');
     setErrorMessage('');
@@ -489,6 +513,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
           const errorMsg = error.message;
           logger.error('[useSpecGeneration] Failed to regenerate spec:', errorMsg);
           setIsRegenerating(false);
+          operationTypeRef.current = 'none';
           setCurrentPhase('error');
           setErrorMessage(errorMsg);
           const errorLog = `[Error] Failed to regenerate spec: ${errorMsg}\n`;
@@ -506,22 +531,25 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
     regenerateSpecMutation,
   ]);
 
-  const handleGenerateFeatures = useCallback(async () => {
+  const handleGenerateFeatures = useCallback(async (featureCount?: FeatureCount) => {
     if (!currentProject) return;
 
     setIsGeneratingFeatures(true);
+    operationTypeRef.current = 'generate_features';
     setShowRegenerateDialog(false);
+    setShowGenerateFeaturesDialog(false);
     setCurrentPhase('initialization');
     setErrorMessage('');
     logsRef.current = '';
     setLogs('');
-    logger.debug('[useSpecGeneration] Starting feature generation from existing spec');
+    logger.debug('[useSpecGeneration] Starting feature generation from existing spec, maxFeatures:', featureCount);
 
-    generateFeaturesMutation.mutate(undefined, {
+    generateFeaturesMutation.mutate(featureCount, {
       onError: (error) => {
         const errorMsg = error.message;
         logger.error('[useSpecGeneration] Failed to generate features:', errorMsg);
         setIsGeneratingFeatures(false);
+        operationTypeRef.current = 'none';
         setCurrentPhase('error');
         setErrorMessage(errorMsg);
         const errorLog = `[Error] Failed to generate features: ${errorMsg}\n`;
@@ -535,6 +563,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
     if (!currentProject) return;
 
     setIsSyncing(true);
+    operationTypeRef.current = 'sync';
     setCurrentPhase('sync');
     setErrorMessage('');
     logsRef.current = '';
@@ -545,6 +574,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
       if (!api.specRegeneration) {
         logger.error('[useSpecGeneration] Spec regeneration not available');
         setIsSyncing(false);
+        operationTypeRef.current = 'none';
         return;
       }
       const result = await api.specRegeneration.sync(currentProject.path);
@@ -553,6 +583,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
         const errorMsg = result.error || 'Unknown error';
         logger.error('[useSpecGeneration] Failed to start spec sync:', errorMsg);
         setIsSyncing(false);
+        operationTypeRef.current = 'none';
         setCurrentPhase('error');
         setErrorMessage(errorMsg);
         const errorLog = `[Error] Failed to start spec sync: ${errorMsg}\n`;
@@ -563,6 +594,7 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error('[useSpecGeneration] Failed to sync spec:', errorMsg);
       setIsSyncing(false);
+      operationTypeRef.current = 'none';
       setCurrentPhase('error');
       setErrorMessage(errorMsg);
       const errorLog = `[Error] Failed to sync spec: ${errorMsg}\n`;
@@ -601,6 +633,10 @@ export function useSpecGeneration({ loadSpec }: UseSpecGenerationOptions) {
     setFeatureCountOnRegenerate,
 
     // Feature generation state
+    showGenerateFeaturesDialog,
+    setShowGenerateFeaturesDialog,
+    featureCountOnGenerate,
+    setFeatureCountOnGenerate,
     isGeneratingFeatures,
 
     // Sync state

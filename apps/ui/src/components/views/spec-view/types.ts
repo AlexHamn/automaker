@@ -34,6 +34,16 @@ export interface CreateSpecDialogProps {
   description?: string;
 }
 
+// Props for the generate features dialog
+export interface GenerateFeaturesDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  featureCount: FeatureCount;
+  onFeatureCountChange: (value: FeatureCount) => void;
+  onGenerate: () => void;
+  isGenerating: boolean;
+}
+
 // Props for the regenerate spec dialog
 export interface RegenerateSpecDialogProps {
   open: boolean;
