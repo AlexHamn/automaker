@@ -9,10 +9,15 @@ const history = isElectron
   ? createMemoryHistory({ initialEntries: [BOARD_ROUTE_PATH] })
   : createBrowserHistory();
 
+// Vite sets import.meta.env.BASE_URL from the `base` config (e.g. '/automaker/')
+// Strip trailing slash so TanStack Router gets '/automaker' (it adds its own)
+const basepath = import.meta.env.BASE_URL?.replace(/\/+$/, '') || '/';
+
 export const router = createRouter({
   routeTree,
   defaultPendingMinMs: 0,
   history,
+  basepath,
 });
 
 declare module '@tanstack/react-router' {
