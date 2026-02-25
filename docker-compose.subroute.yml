@@ -14,6 +14,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: ui
+      network: host
       args:
         VITE_BASE_PATH: /automaker/
         # Set server URL to subroute so API calls go to /automaker/api/
@@ -38,6 +39,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: server
+      network: host
       args:
         UID: ${UID:-1001}
         GID: ${GID:-1001}

@@ -77,7 +77,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libx11-6 libx11-xcb1 libxcb1 libxext6 libxrender1 libxss1 libxtst6 \
     libxshmfence1 libgtk-3-0 libexpat1 libfontconfig1 fonts-liberation \
     xdg-utils libpangocairo-1.0-0 libpangoft2-1.0-0 libu2f-udev libvulkan1 \
-    && GH_VERSION="2.63.2" \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install GitHub CLI (pinned version, multi-arch) - separate layer so ca-certificates are configured
+RUN GH_VERSION="2.63.2" \
     && ARCH=$(uname -m) \
     && case "$ARCH" in \
         x86_64) GH_ARCH="amd64" ;; \
@@ -87,8 +90,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && curl -L "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${GH_ARCH}.tar.gz" -o gh.tar.gz \
     && tar -xzf gh.tar.gz \
     && mv gh_${GH_VERSION}_linux_${GH_ARCH}/bin/gh /usr/local/bin/gh \
-    && rm -rf gh.tar.gz gh_${GH_VERSION}_linux_${GH_ARCH} \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf gh.tar.gz gh_${GH_VERSION}_linux_${GH_ARCH}
 
 # Install Claude CLI globally (available to all users via npm global bin)
 RUN npm install -g @anthropic-ai/claude-code
