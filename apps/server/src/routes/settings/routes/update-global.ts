@@ -11,10 +11,12 @@
 import type { Request, Response } from 'express';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { GlobalSettings } from '../../../types/settings.js';
+import type { Feature } from '@automaker/types';
 import { getErrorMessage, logError, logger } from '../common.js';
 import { setLogLevel, LogLevel } from '@automaker/utils';
 import { setRequestLoggingEnabled } from '../../../index.js';
 import { getTerminalService } from '../../../services/terminal-service.js';
+import { FeatureLoader } from '../../../services/feature-loader.js';
 
 /**
  * Map server log level string to LogLevel enum
@@ -95,6 +97,78 @@ export function createUpdateGlobalHandler(settingsService: SettingsService) {
           } catch (error) {
             logger.warn(
               `[TERMINAL_CONFIG] Failed to regenerate RC files for project ${project.name}: ${error}`
+            );
+          }
+        }
+      }
+
+      // Propagate feature default changes to all backlog/pending features across projects
+      const featureDefaultKeys = [
+        'defaultPlanningMode',
+        'defaultRequirePlanApproval',
+        'defaultSkipTests',
+        'defaultFeatureModel',
+      ] as const;
+
+      const hasFeatureDefaultChange = featureDefaultKeys.some(
+        (key) =>
+          key in updates && JSON.stringify(updates[key]) !== JSON.stringify(oldSettings?.[key])
+      );
+
+      if (hasFeatureDefaultChange) {
+        const featureLoader = new FeatureLoader();
+        const projects = settings.projects || [];
+
+        for (const project of projects) {
+          try {
+            // Check project-level override for defaultFeatureModel
+            const projectSettings = await settingsService.getProjectSettings(project.path);
+            const projectOverridesModel = !!projectSettings.defaultFeatureModel;
+
+            const features = await featureLoader.getAll(project.path);
+            for (const feature of features) {
+              const status = feature.status || 'backlog';
+              if (status !== 'backlog' && status !== 'pending') continue;
+
+              const featureUpdates: Partial<Feature> = {};
+
+              if (
+                'defaultPlanningMode' in updates &&
+                updates.defaultPlanningMode !== oldSettings?.defaultPlanningMode
+              ) {
+                featureUpdates.planningMode = updates.defaultPlanningMode;
+              }
+              if (
+                'defaultRequirePlanApproval' in updates &&
+                updates.defaultRequirePlanApproval !== oldSettings?.defaultRequirePlanApproval
+              ) {
+                featureUpdates.requirePlanApproval = updates.defaultRequirePlanApproval;
+              }
+              if (
+                'defaultSkipTests' in updates &&
+                updates.defaultSkipTests !== oldSettings?.defaultSkipTests
+              ) {
+                featureUpdates.skipTests = updates.defaultSkipTests;
+              }
+              if (
+                'defaultFeatureModel' in updates &&
+                !projectOverridesModel &&
+                JSON.stringify(updates.defaultFeatureModel) !==
+                  JSON.stringify(oldSettings?.defaultFeatureModel)
+              ) {
+                featureUpdates.model = updates.defaultFeatureModel?.model;
+                featureUpdates.thinkingLevel = updates.defaultFeatureModel?.thinkingLevel;
+                featureUpdates.reasoningEffort = updates.defaultFeatureModel?.reasoningEffort;
+              }
+
+              if (Object.keys(featureUpdates).length > 0) {
+                await featureLoader.update(project.path, feature.id, featureUpdates);
+              }
+            }
+            logger.info(`[FEATURE_DEFAULTS] Updated backlog features for project: ${project.name}`);
+          } catch (error) {
+            logger.warn(
+              `[FEATURE_DEFAULTS] Failed to update features for project ${project.name}: ${error}`
             );
           }
         }
