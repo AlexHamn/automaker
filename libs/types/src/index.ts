@@ -180,6 +180,15 @@ export type {
   ProviderModel,
   ClaudeCompatibleProvider,
   ClaudeCompatibleProviderTemplate,
+  // Multi-account failover types
+  AnthropicAuthType,
+  RateLimitType,
+  RateLimitEvent,
+  ClaudeOAuthCredentials,
+  AnthropicAccount,
+  AccountFailoverSettings,
+  // GitHub account types
+  GitHubAccount,
   // Claude API profile types (deprecated)
   ClaudeApiProfile,
   ClaudeApiProfileTemplate,

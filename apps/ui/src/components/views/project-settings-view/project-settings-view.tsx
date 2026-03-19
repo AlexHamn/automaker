@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/app-store';
 import { Settings, FolderOpen, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProjectIdentitySection } from './project-identity-section';
+import { RepositorySection } from './repository-section';
 import { ProjectThemeSection } from './project-theme-section';
 import { WorktreePreferencesSection } from './worktree-preferences-section';
 import { CommandsSection } from './commands-section';
@@ -83,6 +84,8 @@ export function ProjectSettingsView() {
     switch (activeView) {
       case 'identity':
         return <ProjectIdentitySection project={currentProject} />;
+      case 'repository':
+        return <RepositorySection project={currentProject} />;
       case 'theme':
         return <ProjectThemeSection project={currentProject} />;
       case 'worktrees':

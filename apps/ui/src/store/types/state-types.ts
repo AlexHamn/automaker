@@ -22,6 +22,8 @@ import type {
   EventHook,
   ClaudeApiProfile,
   ClaudeCompatibleProvider,
+  AnthropicAccount,
+  AccountFailoverSettings,
   SidebarStyle,
 } from '@automaker/types';
 
@@ -249,6 +251,10 @@ export interface AppState {
 
   // Claude-Compatible Providers (new system)
   claudeCompatibleProviders: ClaudeCompatibleProvider[]; // Providers that expose models to dropdowns
+
+  // Multi-Account Failover
+  anthropicAccounts: AnthropicAccount[]; // Anthropic API accounts for failover
+  accountFailoverSettings: AccountFailoverSettings; // Failover behavior settings
 
   // Claude API Profiles (deprecated - kept for backward compatibility)
   claudeApiProfiles: ClaudeApiProfile[]; // Claude-compatible API endpoint profiles
@@ -607,6 +613,10 @@ export interface AppActions {
   deleteClaudeCompatibleProvider: (id: string) => Promise<void>;
   setClaudeCompatibleProviders: (providers: ClaudeCompatibleProvider[]) => Promise<void>;
   toggleClaudeCompatibleProviderEnabled: (id: string) => Promise<void>;
+
+  // Anthropic Account actions (multi-account failover)
+  setAnthropicAccounts: (accounts: AnthropicAccount[]) => void;
+  setAccountFailoverSettings: (settings: AccountFailoverSettings) => void;
 
   // Claude API Profile actions (deprecated - kept for backward compatibility)
   addClaudeApiProfile: (profile: ClaudeApiProfile) => Promise<void>;

@@ -14,6 +14,7 @@
 
 import { Router } from 'express';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { AccountManager } from '../../services/account-manager.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createGetGlobalHandler } from './routes/get-global.js';
 import { createUpdateGlobalHandler } from './routes/update-global.js';
@@ -24,6 +25,9 @@ import { createUpdateProjectHandler } from './routes/update-project.js';
 import { createMigrateHandler } from './routes/migrate.js';
 import { createStatusHandler } from './routes/status.js';
 import { createDiscoverAgentsHandler } from './routes/discover-agents.js';
+import { createAccountRoutes } from './routes/accounts.js';
+import { createGitHubAccountRoutes } from './routes/github-accounts.js';
+import type { GitHubAccountManager } from '../../services/github-account-manager.js';
 
 /**
  * Create settings router with all endpoints
@@ -45,7 +49,11 @@ import { createDiscoverAgentsHandler } from './routes/discover-agents.js';
  * @param settingsService - Instance of SettingsService for file I/O
  * @returns Express Router configured with all settings endpoints
  */
-export function createSettingsRoutes(settingsService: SettingsService): Router {
+export function createSettingsRoutes(
+  settingsService: SettingsService,
+  accountManager?: AccountManager,
+  githubAccountManager?: GitHubAccountManager
+): Router {
   const router = Router();
 
   // Status endpoint (check if migration needed)
@@ -76,6 +84,16 @@ export function createSettingsRoutes(settingsService: SettingsService): Router {
 
   // Filesystem agents discovery (read-only)
   router.post('/agents/discover', createDiscoverAgentsHandler());
+
+  // Anthropic accounts management (multi-account failover)
+  if (accountManager) {
+    router.use('/accounts', createAccountRoutes(settingsService, accountManager));
+  }
+
+  // GitHub accounts management
+  if (githubAccountManager) {
+    router.use('/github-accounts', createGitHubAccountRoutes(githubAccountManager));
+  }
 
   return router;
 }

@@ -17,11 +17,14 @@ import {
   createDeleteValidationHandler,
   createMarkViewedHandler,
 } from './routes/validation-endpoints.js';
+import { createCreateRepoHandler, createRepoStatusHandler } from './routes/repo-management.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { GitHubAccountManager } from '../../services/github-account-manager.js';
 
 export function createGitHubRoutes(
   events: EventEmitter,
-  settingsService?: SettingsService
+  settingsService?: SettingsService,
+  githubAccountManager?: GitHubAccountManager
 ): Router {
   const router = Router();
 
@@ -53,6 +56,20 @@ export function createGitHubRoutes(
     validatePathParams('projectPath'),
     createMarkViewedHandler(events)
   );
+
+  // Repo management (requires GitHubAccountManager)
+  if (githubAccountManager) {
+    router.post(
+      '/create-repo',
+      validatePathParams('projectPath'),
+      createCreateRepoHandler(githubAccountManager)
+    );
+    router.post(
+      '/repo-status',
+      validatePathParams('projectPath'),
+      createRepoStatusHandler(githubAccountManager)
+    );
+  }
 
   return router;
 }

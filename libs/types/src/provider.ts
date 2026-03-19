@@ -233,6 +233,26 @@ export interface ExecuteOptions {
    * When a profile/provider has apiKeySource='credentials', the Anthropic key from this object is used.
    */
   credentials?: Credentials;
+
+  /**
+   * Resolved API key from AccountManager for multi-account failover.
+   * When set, takes highest priority for ANTHROPIC_API_KEY in buildEnv().
+   */
+  accountApiKey?: string;
+
+  /**
+   * Per-account HOME directory path for OAuth accounts.
+   * When set, overrides HOME in the SDK subprocess env so the CLI reads
+   * that account's credentials from {homeDir}/.claude/.credentials.json.
+   * Mutually exclusive with accountApiKey — only one should be set.
+   */
+  accountHomeDir?: string;
+
+  /**
+   * Account ID from AccountManager for tracking which account was used.
+   * Used to record rate limit events against the correct account.
+   */
+  accountId?: string | null;
 }
 
 /**

@@ -29,6 +29,7 @@ import {
 import { MCPServersSection } from './settings-view/mcp-servers';
 import { PromptCustomizationSection } from './settings-view/prompts';
 import { EventHooksSection } from './settings-view/event-hooks';
+import { GitHubAccountsSection } from './settings-view/github-accounts-section';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
 import type { Theme } from './settings-view/shared/types';
 
@@ -185,6 +186,8 @@ export function SettingsView() {
         );
       case 'account':
         return <AccountSection />;
+      case 'github':
+        return <GitHubAccountsSection />;
       case 'security':
         return (
           <SecuritySection

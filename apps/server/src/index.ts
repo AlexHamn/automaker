@@ -57,6 +57,8 @@ import { createSettingsRoutes } from './routes/settings/index.js';
 import { AgentService } from './services/agent-service.js';
 import { FeatureLoader } from './services/feature-loader.js';
 import { AutoModeService } from './services/auto-mode-service.js';
+import { AccountManager } from './services/account-manager.js';
+import { GitHubAccountManager } from './services/github-account-manager.js';
 import { getTerminalService } from './services/terminal-service.js';
 import { SettingsService } from './services/settings-service.js';
 import { createSpecRegenerationRoutes } from './routes/app-spec/index.js';
@@ -260,7 +262,10 @@ const events: EventEmitter = createEventEmitter();
 const settingsService = new SettingsService(DATA_DIR);
 const agentService = new AgentService(DATA_DIR, events, settingsService);
 const featureLoader = new FeatureLoader();
+const accountManager = new AccountManager(events, settingsService, DATA_DIR);
+const githubAccountManager = new GitHubAccountManager(settingsService);
 const autoModeService = new AutoModeService(events, settingsService);
+autoModeService.setAccountManager(accountManager);
 const claudeUsageService = new ClaudeUsageService();
 const codexAppServerService = new CodexAppServerService();
 const codexModelCacheService = new CodexModelCacheService(DATA_DIR, codexAppServerService);
@@ -323,6 +328,9 @@ eventHookService.initialize(events, settingsService, eventHistoryService, featur
   await agentService.initialize();
   logger.info('Agent service initialized');
 
+  // Auto-import GH_TOKEN env var as a GitHub account if present
+  await githubAccountManager.autoImportEnvToken();
+
   // Initialize Convex RAG service
   const ragService = getConvexRAGService();
   if (ragService.isEnabled()) {
@@ -374,7 +382,7 @@ app.use(
 );
 app.use('/api/auto-mode', createAutoModeRoutes(autoModeService));
 app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
-app.use('/api/worktree', createWorktreeRoutes(events, settingsService));
+app.use('/api/worktree', createWorktreeRoutes(events, settingsService, githubAccountManager));
 app.use('/api/git', createGitRoutes());
 app.use('/api/models', createModelsRoutes());
 app.use('/api/spec-regeneration', createSpecRegenerationRoutes(events, settingsService));
@@ -382,10 +390,13 @@ app.use('/api/running-agents', createRunningAgentsRoutes(autoModeService));
 app.use('/api/workspace', createWorkspaceRoutes());
 app.use('/api/templates', createTemplatesRoutes());
 app.use('/api/terminal', createTerminalRoutes());
-app.use('/api/settings', createSettingsRoutes(settingsService));
+app.use(
+  '/api/settings',
+  createSettingsRoutes(settingsService, accountManager, githubAccountManager)
+);
 app.use('/api/claude', createClaudeRoutes(claudeUsageService));
 app.use('/api/codex', createCodexRoutes(codexUsageService, codexModelCacheService));
-app.use('/api/github', createGitHubRoutes(events, settingsService));
+app.use('/api/github', createGitHubRoutes(events, settingsService, githubAccountManager));
 app.use('/api/context', createContextRoutes(settingsService));
 app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
 app.use('/api/mcp', createMCPRoutes(mcpTestService));

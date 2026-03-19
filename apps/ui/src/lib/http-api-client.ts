@@ -566,7 +566,9 @@ type EventType =
   | 'test-runner:started'
   | 'test-runner:output'
   | 'test-runner:completed'
-  | 'notification:created';
+  | 'notification:created'
+  | 'account:rate-limited'
+  | 'account:failover';
 
 /**
  * Dev server log event payloads for WebSocket streaming
@@ -2037,8 +2039,8 @@ export class HttpApiClient implements ElectronAPI {
         worktreePath,
         deleteBranch,
       }),
-    commit: (worktreePath: string, message: string) =>
-      this.post('/api/worktree/commit', { worktreePath, message }),
+    commit: (worktreePath: string, message: string, projectPath?: string) =>
+      this.post('/api/worktree/commit', { worktreePath, message, projectPath }),
     generateCommitMessage: (worktreePath: string) =>
       this.post('/api/worktree/generate-commit-message', { worktreePath }),
     push: (worktreePath: string, force?: boolean, remote?: string) =>
@@ -2946,6 +2948,31 @@ export class HttpApiClient implements ElectronAPI {
       stepIds: string[]
     ): Promise<{ success: boolean; error?: string }> =>
       this.post('/api/pipeline/steps/reorder', { projectPath, stepIds }),
+  };
+
+  // Account Failover API - multi-account event subscriptions
+  accounts = {
+    onRateLimited: (
+      callback: (payload: {
+        accountId: string;
+        accountName: string;
+        type: string;
+        resetAt: string;
+        resetTimeString?: string;
+      }) => void
+    ): (() => void) => {
+      return this.subscribeToEvent('account:rate-limited', callback as EventCallback);
+    },
+
+    onFailover: (
+      callback: (payload: {
+        fromAccountId: string;
+        toAccountId: string;
+        toAccountName: string;
+      }) => void
+    ): (() => void) => {
+      return this.subscribeToEvent('account:failover', callback as EventCallback);
+    },
   };
 }
 

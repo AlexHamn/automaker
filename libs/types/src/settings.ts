@@ -343,6 +343,113 @@ export interface ClaudeCompatibleProvider {
 }
 
 /**
+ * Rate limit type classification
+ */
+export type RateLimitType = 'session' | 'daily' | 'weekly' | 'unknown';
+
+/**
+ * Record of a rate limit event for an Anthropic account
+ */
+export interface RateLimitEvent {
+  /** Type of rate limit encountered */
+  type: RateLimitType;
+  /** ISO timestamp when the rate limit was hit */
+  hitAt: string;
+  /** ISO timestamp when the rate limit is expected to reset */
+  resetAt: string;
+  /** Human-readable reset time string (e.g., "in 5 minutes") */
+  resetTimeString?: string;
+}
+
+/**
+ * Authentication type for Anthropic accounts.
+ * - 'api-key': Uses ANTHROPIC_API_KEY (standard API key auth)
+ * - 'oauth': Uses ANTHROPIC_AUTH_TOKEN (Claude Code OAuth auth from `claude login`)
+ */
+export type AnthropicAuthType = 'api-key' | 'oauth';
+
+/**
+ * ClaudeOAuthCredentials - Full OAuth credentials from ~/.claude/.credentials.json
+ *
+ * Contains the complete set of tokens needed for the Claude CLI to authenticate.
+ * These are written to per-account HOME directories so the SDK subprocess
+ * can read them via its standard credential resolution flow.
+ */
+export interface ClaudeOAuthCredentials {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  scopes?: string[];
+  subscriptionType?: string;
+  rateLimitTier?: string;
+}
+
+/**
+ * AnthropicAccount - An Anthropic API account for multi-key failover
+ *
+ * Multiple accounts can be configured to pool API keys or OAuth tokens.
+ * When one hits a rate limit, the system automatically fails over to the
+ * next available account. Supports both API key and Claude Code OAuth auth.
+ */
+export interface AnthropicAccount {
+  /** Unique identifier (UUID) */
+  id: string;
+  /** Display name (e.g., "Personal", "Work Org") */
+  name: string;
+  /** Authentication type: 'api-key' for ANTHROPIC_API_KEY, 'oauth' for ANTHROPIC_AUTH_TOKEN */
+  authType: AnthropicAuthType;
+  /** Anthropic API key (required when authType is 'api-key') */
+  apiKey?: string;
+  /** @deprecated Use oauthCredentials instead. Kept for backward compatibility. */
+  authToken?: string;
+  /** Full OAuth credentials for per-account HOME directory */
+  oauthCredentials?: ClaudeOAuthCredentials;
+  /** Whether this account is enabled for use */
+  enabled: boolean;
+  /** Priority order (0 = highest priority) */
+  priority: number;
+  /** Recent rate limit events, most recent first (max 10) */
+  rateLimitEvents: RateLimitEvent[];
+  /** ISO timestamp of last successful use */
+  lastUsedAt?: string;
+  /** ISO timestamp when this account was added */
+  createdAt: string;
+}
+
+/**
+ * GitHubAccount - A GitHub account for gh CLI operations
+ *
+ * Stores a PAT or token obtained via `gh auth login` for per-project
+ * GitHub account selection. Injected as GH_TOKEN env var.
+ */
+export interface GitHubAccount {
+  /** Unique identifier (uuid) */
+  id: string;
+  /** Display name (e.g., "Personal", "Work") */
+  name: string;
+  /** GitHub username (from `gh api user --jq .login`) */
+  username: string;
+  /** GitHub token (PAT or from `gh auth token`) */
+  token: string;
+  /** Whether this account is enabled for use */
+  enabled: boolean;
+  /** ISO timestamp when this account was added */
+  createdAt: string;
+}
+
+/**
+ * AccountFailoverSettings - Configuration for automatic API key failover
+ */
+export interface AccountFailoverSettings {
+  /** Whether automatic failover is enabled (default: true) */
+  enabled: boolean;
+  /** Round-robin distribute accounts across concurrent features (default: true) */
+  distributeConcurrent: boolean;
+  /** Buffer seconds after reset time before considering account available (default: 30) */
+  resetBufferSeconds: number;
+}
+
+/**
  * ClaudeApiProfile - Configuration for a Claude-compatible API endpoint
  *
  * @deprecated Use ClaudeCompatibleProvider instead. This type is kept for
@@ -1247,6 +1354,24 @@ export interface GlobalSettings {
       branchName: string | null;
     }
   >;
+
+  // Multi-Account Failover Configuration
+  /**
+   * Anthropic API accounts for multi-key failover.
+   * When one key hits a rate limit, the system fails over to the next available.
+   */
+  anthropicAccounts?: AnthropicAccount[];
+
+  /**
+   * Settings controlling automatic account failover behavior.
+   */
+  accountFailoverSettings?: AccountFailoverSettings;
+
+  /**
+   * GitHub accounts for per-project gh CLI operations.
+   * Each account stores a token injected as GH_TOKEN for repo creation, PR management, etc.
+   */
+  githubAccounts?: GitHubAccount[];
 }
 
 /**
@@ -1442,6 +1567,10 @@ export interface ProjectSettings {
     welcomeMessage?: string;
   };
 
+  // GitHub Integration
+  /** ID of the GitHub account to use for this project (references GitHubAccount.id in global settings) */
+  githubAccountId?: string;
+
   // Deprecated Claude API Profile Override
   /**
    * @deprecated Use phaseModelOverrides instead.
@@ -1585,6 +1714,15 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   claudeApiProfiles: [],
   activeClaudeApiProfileId: null,
   autoModeByWorktree: {},
+  // Multi-account failover
+  anthropicAccounts: [],
+  accountFailoverSettings: {
+    enabled: true,
+    distributeConcurrent: true,
+    resetBufferSeconds: 30,
+  },
+  // GitHub accounts
+  githubAccounts: [],
 };
 
 /** Default credentials (empty strings - user must provide API keys) */

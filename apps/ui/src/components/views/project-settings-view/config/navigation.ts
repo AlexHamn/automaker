@@ -7,6 +7,7 @@ import {
   Workflow,
   Database,
   Terminal,
+  Github,
 } from 'lucide-react';
 import type { ProjectSettingsViewId } from '../hooks/use-project-settings-view';
 
@@ -18,6 +19,7 @@ export interface ProjectNavigationItem {
 
 export const PROJECT_SETTINGS_NAV_ITEMS: ProjectNavigationItem[] = [
   { id: 'identity', label: 'Identity', icon: User },
+  { id: 'repository', label: 'Repository', icon: Github },
   { id: 'worktrees', label: 'Worktrees', icon: GitBranch },
   { id: 'commands', label: 'Commands', icon: Terminal },
   { id: 'theme', label: 'Theme', icon: Palette },

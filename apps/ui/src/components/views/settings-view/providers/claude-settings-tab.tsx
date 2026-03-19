@@ -8,6 +8,7 @@ import { ClaudeUsageSection } from '../api-keys/claude-usage-section';
 import { SkillsSection } from './claude-settings-tab/skills-section';
 import { SubagentsSection } from './claude-settings-tab/subagents-section';
 import { ApiProfilesSection } from './claude-settings-tab/api-profiles-section';
+import { AnthropicAccountsSection } from './claude-settings-tab/anthropic-accounts-section';
 import { ProviderToggle } from './provider-toggle';
 import { Info } from 'lucide-react';
 
@@ -46,6 +47,9 @@ export function ClaudeSettingsTab() {
         isChecking={isCheckingClaudeCli}
         onRefresh={handleRefreshClaudeCli}
       />
+
+      {/* Multi-account failover */}
+      <AnthropicAccountsSection />
 
       {/* Claude-compatible providers */}
       <ApiProfilesSection />

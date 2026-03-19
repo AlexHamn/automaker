@@ -82,7 +82,9 @@ function isClaudeCompatibleProvider(config: ProviderConfig): config is ClaudeCom
  */
 function buildEnv(
   providerConfig?: ProviderConfig,
-  credentials?: Credentials
+  credentials?: Credentials,
+  accountApiKey?: string,
+  accountHomeDir?: string
 ): Record<string, string | undefined> {
   const env: Record<string, string | undefined> = {};
 
@@ -152,21 +154,22 @@ function buildEnv(
   } else {
     // Use direct Anthropic API - pass through credentials or environment variables
     // This supports:
-    // 1. API Key mode: ANTHROPIC_API_KEY from credentials (UI settings) or env
-    // 2. Claude Max plan: Uses CLI OAuth auth (SDK handles this automatically)
-    // 3. Custom endpoints via ANTHROPIC_BASE_URL env var (backward compatibility)
+    // 1. AccountManager API key: Multi-account failover with API keys
+    // 2. API Key mode: ANTHROPIC_API_KEY from credentials (UI settings) or env
+    // 3. Claude Max plan: Uses CLI OAuth auth (SDK handles this automatically)
+    // 4. Custom endpoints via ANTHROPIC_BASE_URL env var (backward compatibility)
     //
-    // Priority: credentials file (UI settings) -> environment variable
-    // Note: Only auth and endpoint vars are passed. Model mappings and traffic
-    // control are NOT passed (those require a profile for explicit configuration).
-    if (credentials?.apiKeys?.anthropic) {
+    // OAuth accounts use per-account HOME dirs (accountHomeDir) instead of env vars.
+    //
+    // Priority: accountApiKey -> credentials file (UI settings) -> environment variable
+    if (accountApiKey) {
+      env['ANTHROPIC_API_KEY'] = accountApiKey;
+    } else if (credentials?.apiKeys?.anthropic) {
       env['ANTHROPIC_API_KEY'] = credentials.apiKeys.anthropic;
     } else if (process.env.ANTHROPIC_API_KEY) {
       env['ANTHROPIC_API_KEY'] = process.env.ANTHROPIC_API_KEY;
     }
-    // If using Claude Max plan via CLI auth, the SDK handles auth automatically
-    // when no API key is provided. We don't set ANTHROPIC_AUTH_TOKEN here
-    // unless it was explicitly set in process.env (rare edge case).
+    // Pass through env ANTHROPIC_AUTH_TOKEN for CLI-level OAuth (not per-account)
     if (process.env.ANTHROPIC_AUTH_TOKEN) {
       env['ANTHROPIC_AUTH_TOKEN'] = process.env.ANTHROPIC_AUTH_TOKEN;
     }
@@ -181,6 +184,18 @@ function buildEnv(
     if (process.env[key]) {
       env[key] = process.env[key];
     }
+  }
+
+  // Override HOME for OAuth per-account authentication.
+  // This must come AFTER system vars loop so we override the real HOME.
+  // The per-account HOME dir contains .claude/.credentials.json with the
+  // account's OAuth tokens, which the Claude CLI reads automatically.
+  if (accountHomeDir) {
+    env['HOME'] = accountHomeDir;
+    // Remove any API key / auth token that would conflict
+    delete env['ANTHROPIC_API_KEY'];
+    delete env['ANTHROPIC_AUTH_TOKEN'];
+    logger.info(`[buildEnv] Set HOME to: ${accountHomeDir} (per-account OAuth)`);
   }
 
   return env;
@@ -231,7 +246,7 @@ export class ClaudeProvider extends BaseProvider {
       // Pass only explicitly allowed environment variables to SDK
       // When a provider is active, uses provider settings (clean switch)
       // When no provider, uses direct Anthropic API (from process.env or CLI OAuth)
-      env: buildEnv(providerConfig, credentials),
+      env: buildEnv(providerConfig, credentials, options.accountApiKey, options.accountHomeDir),
       // Pass through allowedTools if provided by caller (decided by sdk-options.ts)
       ...(allowedTools && { allowedTools }),
       // AUTONOMOUS MODE: Always bypass permissions for fully autonomous operation
@@ -317,6 +332,7 @@ export class ClaudeProvider extends BaseProvider {
       const enhancedError = new Error(message);
       (enhancedError as any).originalError = error;
       (enhancedError as any).type = errorInfo.type;
+      (enhancedError as any).accountId = options.accountId ?? null;
 
       if (errorInfo.isRateLimit) {
         (enhancedError as any).retryAfter = errorInfo.retryAfter;

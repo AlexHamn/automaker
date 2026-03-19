@@ -296,6 +296,12 @@ const initialState: AppState = {
   promptCustomization: {},
   eventHooks: [],
   claudeCompatibleProviders: [],
+  anthropicAccounts: [],
+  accountFailoverSettings: {
+    enabled: true,
+    distributeConcurrent: true,
+    resetBufferSeconds: 30,
+  },
   claudeApiProfiles: [],
   activeClaudeApiProfileId: null,
   projectAnalysis: null,
@@ -1386,6 +1392,10 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       logger.error('Failed to sync Claude-compatible providers:', error);
     }
   },
+
+  // Anthropic Account actions (multi-account failover)
+  setAnthropicAccounts: (accounts) => set({ anthropicAccounts: accounts }),
+  setAccountFailoverSettings: (settings) => set({ accountFailoverSettings: settings }),
 
   // Claude API Profile actions (deprecated)
   addClaudeApiProfile: async (profile) => {

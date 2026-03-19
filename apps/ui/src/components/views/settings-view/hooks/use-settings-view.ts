@@ -21,6 +21,7 @@ export type SettingsViewId =
   | 'defaults'
   | 'worktrees'
   | 'account'
+  | 'github'
   | 'security'
   | 'developer'
   | 'danger';

@@ -16,6 +16,7 @@ import {
   GitBranch,
   Code2,
   Webhook,
+  Github,
 } from 'lucide-react';
 import {
   AnthropicIcon,
@@ -79,6 +80,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
     label: 'Account & Security',
     items: [
       { id: 'account', label: 'Account', icon: User },
+      { id: 'github', label: 'GitHub', icon: Github },
       { id: 'security', label: 'Security', icon: Shield },
     ],
   },
