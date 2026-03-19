@@ -5,6 +5,7 @@
 import type { Request, Response } from 'express';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { getConvexRAGService } from '../../../services/convex-rag-service.js';
+import { getFileWatcherService } from '../../../services/file-watcher-service.js';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createListHandler(featureLoader: FeatureLoader) {
@@ -24,6 +25,11 @@ export function createListHandler(featureLoader: FeatureLoader) {
       const ragService = getConvexRAGService();
       if (ragService.isAvailable()) {
         ragService.indexProjectIfStale(projectPath).catch(() => {});
+        // Start watching this project for file changes (idempotent)
+        const watcher = getFileWatcherService();
+        if (watcher) {
+          watcher.watchProject(projectPath);
+        }
       }
     } catch (error) {
       logError(error, 'List features failed');

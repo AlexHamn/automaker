@@ -50,6 +50,9 @@ import {
 import type { WorkMode } from '../shared';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { SimilarImplementations } from '../components/similar-implementations';
+import { GotchaWarnings } from '../components/gotcha-warnings';
+import { RiskIndicator } from '../components/risk-indicator';
 import {
   getAncestors,
   formatAncestorContextForPrompt,
@@ -197,6 +200,7 @@ export function AddFeatureDialog({
   // Get defaults from store
   const { defaultPlanningMode, defaultRequirePlanApproval, useWorktrees, defaultFeatureModel } =
     useAppStore();
+  const projectPath = useAppStore((s) => s.currentProject?.path);
 
   // Track previous open state to detect when dialog opens
   const wasOpenRef = useRef(false);
@@ -454,6 +458,18 @@ export function AddFeatureDialog({
                 onPreviewMapChange={setPreviewMap}
                 autoFocus
                 error={descriptionError}
+              />
+              <SimilarImplementations
+                projectPath={projectPath}
+                description={description}
+                category={category}
+              />
+              <GotchaWarnings projectPath={projectPath} description={description} />
+              <RiskIndicator
+                projectPath={projectPath}
+                title={title}
+                description={description}
+                category={category}
               />
             </div>
 

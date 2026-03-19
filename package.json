@@ -58,7 +58,9 @@
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
     "convex:generate": "convex codegen",
-    "rag:index": "tsx scripts/rag-index.ts"
+    "rag:index": "tsx scripts/rag-index.ts",
+    "rag:backfill": "tsx scripts/rag-backfill.ts",
+    "rag:index-code": "tsx scripts/rag-index-code.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md,html,yml,yaml}": [

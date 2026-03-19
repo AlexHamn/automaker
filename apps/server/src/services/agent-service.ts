@@ -21,6 +21,7 @@ import { ProviderFactory } from '../providers/provider-factory.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
 import { PathNotAllowedError } from '@automaker/platform';
 import type { SettingsService } from './settings-service.js';
+import { getConvexRAGService } from './convex-rag-service.js';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -314,11 +315,45 @@ export class AgentService {
       // (SDK handles CLAUDE.md via settingSources), but keep other context files like CODE_QUALITY.md
       const contextFilesPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
 
-      // Build combined system prompt with base prompt and context files
+      // Retrieve relevant context from RAG knowledge base (non-blocking)
+      let ragContextSection = '';
+      try {
+        const ragService = getConvexRAGService();
+        const ragResult = await ragService.searchForAgent(effectiveWorkDir, message);
+        if (ragResult) {
+          ragContextSection = `\n\n${ragResult}`;
+        }
+        // Also search for relevant gotchas/warnings
+        try {
+          const gotchaResult = await ragService.searchGotchas(effectiveWorkDir, message);
+          if (gotchaResult.context && gotchaResult.chunksRetrieved > 0) {
+            ragContextSection += `\n\n## Known Issues & Gotchas\n\nThe following warnings were found in the project knowledge base:\n\n${gotchaResult.context}`;
+          }
+        } catch {
+          /* gotcha search is non-blocking */
+        }
+        // Search for relevant code patterns
+        try {
+          const codeResult = await ragService.findCodePatterns(effectiveWorkDir, message);
+          if (codeResult.context && codeResult.chunksRetrieved > 0) {
+            ragContextSection += `\n\n## Relevant Codebase Patterns\n\n${codeResult.context}`;
+          }
+        } catch {
+          /* code pattern search is non-blocking */
+        }
+      } catch (error) {
+        this.logger.warn('[AgentService] RAG search failed, continuing without RAG context', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+
+      // Build combined system prompt with base prompt, context files, and RAG context
       const baseSystemPrompt = await this.getSystemPrompt();
       const combinedSystemPrompt = contextFilesPrompt
-        ? `${contextFilesPrompt}\n\n${baseSystemPrompt}`
-        : baseSystemPrompt;
+        ? `${contextFilesPrompt}${ragContextSection}\n\n${baseSystemPrompt}`
+        : ragContextSection
+          ? `${ragContextSection.trimStart()}\n\n${baseSystemPrompt}`
+          : baseSystemPrompt;
 
       // Build SDK options using centralized configuration
       // Use thinking level and reasoning effort from request, or fall back to session's stored values

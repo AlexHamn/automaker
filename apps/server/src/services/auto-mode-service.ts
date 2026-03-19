@@ -72,6 +72,7 @@ import {
   getPhaseModelWithOverrides,
 } from '../lib/settings-helpers.js';
 import { getNotificationService } from './notification-service.js';
+import { getConvexRAGService } from './convex-rag-service.js';
 
 const execAsync = promisify(exec);
 
@@ -1331,6 +1332,27 @@ export class AutoModeService {
 
         // Extract and record learnings from the agent output
         await this.recordLearningsFromFeature(projectPath, feature, agentOutput);
+
+        // Index agent output into RAG knowledge base (non-blocking)
+        if (agentOutput) {
+          try {
+            const ragService = getConvexRAGService();
+            if (ragService.isAvailable()) {
+              ragService
+                .indexFeatureOutput(
+                  projectPath,
+                  featureId,
+                  feature.title || featureId,
+                  feature.category || 'general',
+                  agentOutput,
+                  true // successful completion
+                )
+                .catch((err) => logger.warn('[AutoMode] RAG feature output indexing failed:', err));
+            }
+          } catch {
+            /* non-blocking */
+          }
+        }
       } catch (learningError) {
         console.warn('[AutoMode] Failed to record learnings:', learningError);
       }
@@ -2098,6 +2120,38 @@ Address the follow-up instructions above. Review the previous work and make the 
 
       // Record success to reset consecutive failure tracking
       this.recordSuccess();
+
+      // Index follow-up agent output into RAG knowledge base (non-blocking)
+      try {
+        const ragService = getConvexRAGService();
+        if (ragService.isAvailable()) {
+          const featureDir = getFeatureDir(projectPath, featureId);
+          const outputPath = path.join(featureDir, 'agent-output.md');
+          try {
+            const outputContent = await secureFs.readFile(outputPath, 'utf-8');
+            const agentOutput =
+              typeof outputContent === 'string' ? outputContent : outputContent.toString();
+            if (agentOutput) {
+              ragService
+                .indexFeatureOutput(
+                  projectPath,
+                  featureId,
+                  feature?.title || featureId,
+                  feature?.category || 'general',
+                  agentOutput,
+                  true // successful follow-up
+                )
+                .catch((err) =>
+                  logger.warn('[AutoMode] RAG follow-up output indexing failed:', err)
+                );
+            }
+          } catch {
+            /* output file may not exist */
+          }
+        }
+      } catch {
+        /* non-blocking */
+      }
 
       this.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,

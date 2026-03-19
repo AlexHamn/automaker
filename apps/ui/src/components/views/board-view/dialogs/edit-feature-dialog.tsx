@@ -43,6 +43,9 @@ import { PhaseModelSelector } from '@/components/views/settings-view/model-defau
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DependencyTreeDialog } from './dependency-tree-dialog';
 import { isClaudeModel, supportsReasoningEffort } from '@automaker/types';
+import { SimilarImplementations } from '../components/similar-implementations';
+import { GotchaWarnings } from '../components/gotcha-warnings';
+import { RiskIndicator } from '../components/risk-indicator';
 
 const logger = createLogger('EditFeatureDialog');
 
@@ -92,6 +95,7 @@ export function EditFeatureDialog({
   allFeatures,
 }: EditFeatureDialogProps) {
   const navigate = useNavigate();
+  const projectPath = useAppStore((s) => s.currentProject?.path);
   const [editingFeature, setEditingFeature] = useState<Feature | null>(feature);
   // Derive initial workMode from feature's branchName
   const [workMode, setWorkMode] = useState<WorkMode>(() => {
@@ -345,6 +349,18 @@ export function EditFeatureDialog({
                 previewMap={editFeaturePreviewMap}
                 onPreviewMapChange={setEditFeaturePreviewMap}
                 data-testid="edit-feature-description"
+              />
+              <SimilarImplementations
+                projectPath={projectPath}
+                description={editingFeature.description}
+                category={editingFeature.category}
+              />
+              <GotchaWarnings projectPath={projectPath} description={editingFeature.description} />
+              <RiskIndicator
+                projectPath={projectPath}
+                title={editingFeature.title}
+                description={editingFeature.description}
+                category={editingFeature.category}
               />
             </div>
 

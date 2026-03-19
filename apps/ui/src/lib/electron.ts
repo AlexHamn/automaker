@@ -700,6 +700,115 @@ export interface ElectronAPI {
       error?: string;
     }>;
   };
+  rag?: {
+    searchSimilar: (
+      projectPath: string,
+      description: string,
+      category?: string,
+      limit?: number
+    ) => Promise<{
+      success: boolean;
+      result?: {
+        context: string;
+        sources: string[];
+        chunksRetrieved: number;
+        latencyMs: number;
+      };
+      error?: string;
+    }>;
+    searchGotchas: (
+      projectPath: string,
+      taskDescription: string,
+      limit?: number
+    ) => Promise<{
+      success: boolean;
+      result?: {
+        context: string;
+        sources: string[];
+        chunksRetrieved: number;
+        latencyMs: number;
+      };
+      error?: string;
+    }>;
+    getStatus: (projectPath: string) => Promise<{
+      success: boolean;
+      status?: {
+        enabled: boolean;
+        configured: boolean;
+        url?: string;
+        projectId: string;
+        indexed: boolean;
+        fileCount?: number;
+        files: Array<{
+          filePath: string;
+          contentType: string;
+          lastIndexed: string;
+        }>;
+        error?: string;
+      };
+      error?: string;
+    }>;
+    indexProject: (projectPath: string) => Promise<{
+      success: boolean;
+      result?: {
+        projectId: string;
+        summary: {
+          total: number;
+          indexed: number;
+          skipped: number;
+          failed: number;
+          duration: number;
+        };
+      };
+      error?: string;
+    }>;
+    indexCode: (projectPath: string) => Promise<{
+      success: boolean;
+      result?: {
+        projectId: string;
+        summary: {
+          total: number;
+          indexed: number;
+          skipped: number;
+          failed: number;
+          duration: number;
+        };
+      };
+      error?: string;
+    }>;
+    search: (
+      projectPath: string,
+      query: string,
+      contentType?: string,
+      limit?: number
+    ) => Promise<{
+      success: boolean;
+      result?: {
+        context: string;
+        sources: string[];
+        chunksRetrieved: number;
+        latencyMs: number;
+      };
+      error?: string;
+    }>;
+    assessRisk: (
+      projectPath: string,
+      featureTitle: string,
+      featureDescription: string,
+      category?: string
+    ) => Promise<{
+      success: boolean;
+      result?: {
+        riskScore: number;
+        riskLevel: 'low' | 'medium' | 'high';
+        factors: Array<{ type: string; description: string; weight: number }>;
+        recommendations: string[];
+        similarFeatureCount: number;
+        latencyMs: number;
+      };
+      error?: string;
+    }>;
+  };
   worktree?: WorktreeAPI;
   git?: GitAPI;
   suggestions?: SuggestionsAPI;
