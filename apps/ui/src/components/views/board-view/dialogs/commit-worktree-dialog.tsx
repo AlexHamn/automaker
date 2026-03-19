@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
+import { queryKeys } from '@/lib/query-keys';
 
 interface WorktreeInfo {
   path: string;
@@ -28,6 +30,7 @@ interface CommitWorktreeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   worktree: WorktreeInfo | null;
+  projectPath?: string;
   onCommitted: () => void;
 }
 
@@ -35,6 +38,7 @@ export function CommitWorktreeDialog({
   open,
   onOpenChange,
   worktree,
+  projectPath,
   onCommitted,
 }: CommitWorktreeDialogProps) {
   const [message, setMessage] = useState('');
@@ -42,6 +46,7 @@ export function CommitWorktreeDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const enableAiCommitMessages = useAppStore((state) => state.enableAiCommitMessages);
+  const queryClient = useQueryClient();
 
   const handleCommit = async () => {
     if (!worktree || !message.trim()) return;
@@ -55,13 +60,15 @@ export function CommitWorktreeDialog({
         setError('Worktree API not available');
         return;
       }
-      const result = await api.worktree.commit(worktree.path, message);
+      const result = await api.worktree.commit(worktree.path, message, projectPath);
 
       if (result.success && result.result) {
         if (result.result.committed) {
           toast.success('Changes committed', {
             description: `Commit ${result.result.commitHash} on ${result.result.branch}`,
           });
+          // Invalidate branches cache so ahead/behind counts update
+          queryClient.invalidateQueries({ queryKey: ['worktrees', 'branches', worktree.path] });
           onCommitted();
           onOpenChange(false);
           setMessage('');

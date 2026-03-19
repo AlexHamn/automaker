@@ -379,6 +379,7 @@ export function createListHandler() {
           try {
             const { stdout: statusOutput } = await execAsync('git status --porcelain', {
               cwd: worktree.path,
+              maxBuffer: 10 * 1024 * 1024, // 10MB for repos with many untracked files
             });
             const changedFiles = statusOutput
               .trim()

@@ -14,10 +14,12 @@ import {
 import { updateWorktreePRInfo } from '../../../lib/worktree-metadata.js';
 import { createLogger } from '@automaker/utils';
 import { validatePRState } from '@automaker/types';
+import type { GitHubAccountManager } from '../../../services/github-account-manager.js';
+import { getExecEnvWithGitIdentity } from '../../github/routes/common.js';
 
 const logger = createLogger('CreatePR');
 
-export function createCreatePRHandler() {
+export function createCreatePRHandler(githubAccountManager?: GitHubAccountManager) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { worktreePath, projectPath, commitMessage, prTitle, prBody, baseBranch, draft } =
@@ -43,10 +45,20 @@ export function createCreatePRHandler() {
       // For worktrees, projectPath is needed to store metadata in the main project's .automaker folder
       const effectiveProjectPath = projectPath || worktreePath;
 
+      // Resolve GitHub account for token and git identity
+      let ghToken: string | undefined;
+      let ghUsername: string | undefined;
+      if (githubAccountManager) {
+        const account = await githubAccountManager.getAccountForProject(effectiveProjectPath);
+        ghToken = account?.token;
+        ghUsername = account?.username;
+      }
+      const env = getExecEnvWithGitIdentity(ghToken, ghUsername);
+
       // Get current branch name
       const { stdout: branchOutput } = await execAsync('git rev-parse --abbrev-ref HEAD', {
         cwd: worktreePath,
-        env: execEnv,
+        env,
       });
       const branchName = branchOutput.trim();
 
@@ -63,7 +75,8 @@ export function createCreatePRHandler() {
       logger.debug(`Checking for uncommitted changes in: ${worktreePath}`);
       const { stdout: status } = await execAsync('git status --porcelain', {
         cwd: worktreePath,
-        env: execEnv,
+        env,
+        maxBuffer: 10 * 1024 * 1024,
       });
       const hasChanges = status.trim().length > 0;
       logger.debug(`Has uncommitted changes: ${hasChanges}`);
@@ -80,19 +93,20 @@ export function createCreatePRHandler() {
         try {
           // Stage all changes
           logger.debug(`Running: git add -A`);
-          await execAsync('git add -A', { cwd: worktreePath, env: execEnv });
+          await execAsync('git add -A', { cwd: worktreePath, env, maxBuffer: 10 * 1024 * 1024 });
 
           // Create commit
           logger.debug(`Running: git commit`);
           await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
             cwd: worktreePath,
-            env: execEnv,
+            env,
+            maxBuffer: 10 * 1024 * 1024,
           });
 
           // Get commit hash
           const { stdout: hashOutput } = await execAsync('git rev-parse HEAD', {
             cwd: worktreePath,
-            env: execEnv,
+            env,
           });
           commitHash = hashOutput.trim().substring(0, 8);
           logger.info(`Commit successful: ${commitHash}`);
@@ -115,21 +129,14 @@ export function createCreatePRHandler() {
       try {
         await execAsync(`git push -u origin ${branchName}`, {
           cwd: worktreePath,
-          env: execEnv,
+          env,
+          maxBuffer: 10 * 1024 * 1024,
         });
-      } catch (error: unknown) {
-        // If push fails, try with --set-upstream
-        try {
-          await execAsync(`git push --set-upstream origin ${branchName}`, {
-            cwd: worktreePath,
-            env: execEnv,
-          });
-        } catch (error2: unknown) {
-          // Capture push error for reporting
-          const err = error2 as { stderr?: string; message?: string };
-          pushError = err.stderr || err.message || 'Push failed';
-          logger.error('Push failed:', pushError);
-        }
+      } catch (error2: unknown) {
+        // Capture push error for reporting
+        const err = error2 as { stderr?: string; message?: string };
+        pushError = err.stderr || err.message || 'Push failed';
+        logger.error('Push failed:', pushError);
       }
 
       // If push failed, return error
@@ -160,7 +167,7 @@ export function createCreatePRHandler() {
       try {
         const { stdout: remotes } = await execAsync('git remote -v', {
           cwd: worktreePath,
-          env: execEnv,
+          env,
         });
 
         // Parse remotes to detect fork workflow and get repo URL
@@ -204,7 +211,7 @@ export function createCreatePRHandler() {
         try {
           const { stdout: originUrl } = await execAsync('git config --get remote.origin.url', {
             cwd: worktreePath,
-            env: execEnv,
+            env,
           });
           const url = originUrl.trim();
 
@@ -254,7 +261,7 @@ export function createCreatePRHandler() {
           logger.debug(`Running: ${listCmd}`);
           const { stdout: existingPrOutput } = await execAsync(listCmd, {
             cwd: worktreePath,
-            env: execEnv,
+            env,
           });
           logger.debug(`gh pr list output: ${existingPrOutput}`);
 
@@ -309,7 +316,7 @@ export function createCreatePRHandler() {
             logger.debug(`Creating PR with command: ${prCmd}`);
             const { stdout: prOutput } = await execAsync(prCmd, {
               cwd: worktreePath,
-              env: execEnv,
+              env,
             });
             prUrl = prOutput.trim();
             logger.info(`PR created: ${prUrl}`);
@@ -347,7 +354,7 @@ export function createCreatePRHandler() {
               try {
                 const { stdout: viewOutput } = await execAsync(
                   `gh pr view --json number,title,url,state`,
-                  { cwd: worktreePath, env: execEnv }
+                  { cwd: worktreePath, env }
                 );
                 const existingPr = JSON.parse(viewOutput);
                 if (existingPr.url) {

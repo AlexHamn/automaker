@@ -53,6 +53,8 @@ export type EventType =
   | 'test-runner:completed'
   | 'test-runner:error'
   | 'test-runner:result'
-  | 'notification:created';
+  | 'notification:created'
+  | 'account:rate-limited'
+  | 'account:failover';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;

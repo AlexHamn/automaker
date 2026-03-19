@@ -29,9 +29,6 @@ services:
     volumes:
       # Override nginx config for subroute serving
       - ./apps/ui/nginx.subroute.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - dmc-network
-      - default
 
   # Backend API Server
   server:
@@ -69,15 +66,6 @@ services:
       - automaker-opencode-data:/home/automaker/.local/share/opencode
       - automaker-opencode-config:/home/automaker/.config/opencode
       - automaker-opencode-cache:/home/automaker/.cache/opencode
-    networks:
-      - dmc-network
-      - default
-
-networks:
-  dmc-network:
-    external: true
-  default:
-    driver: bridge
 
 volumes:
   automaker-projects:

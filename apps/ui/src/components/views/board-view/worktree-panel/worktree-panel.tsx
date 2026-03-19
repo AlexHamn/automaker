@@ -90,6 +90,15 @@ export function WorktreePanel({
     gitRepoStatus,
   } = useBranches();
 
+  // Eagerly fetch branch data for the main worktree so gitRepoStatus
+  // is populated before the user opens any dropdown
+  const mainWorktreeForBranches = worktrees.find((w) => w.isMain);
+  useEffect(() => {
+    if (mainWorktreeForBranches?.path) {
+      fetchBranches(mainWorktreeForBranches.path);
+    }
+  }, [mainWorktreeForBranches?.path, fetchBranches]);
+
   const {
     isPulling,
     isPushing,

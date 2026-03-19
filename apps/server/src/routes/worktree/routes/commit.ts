@@ -9,14 +9,18 @@ import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError } from '../common.js';
+import type { GitHubAccountManager } from '../../../services/github-account-manager.js';
+import { getExecEnvWithGitIdentity } from '../../github/routes/common.js';
 
 const execAsync = promisify(exec);
+const MAX_BUFFER = 10 * 1024 * 1024; // 10MB
 
-export function createCommitHandler() {
+export function createCommitHandler(githubAccountManager?: GitHubAccountManager) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { worktreePath, message } = req.body as {
+      const { worktreePath, projectPath, message } = req.body as {
         worktreePath: string;
+        projectPath?: string;
         message: string;
       };
 
@@ -28,9 +32,22 @@ export function createCommitHandler() {
         return;
       }
 
+      // Resolve GitHub account for git identity
+      const effectiveProjectPath = projectPath || worktreePath;
+      let ghToken: string | undefined;
+      let ghUsername: string | undefined;
+      if (githubAccountManager) {
+        const account = await githubAccountManager.getAccountForProject(effectiveProjectPath);
+        ghToken = account?.token;
+        ghUsername = account?.username;
+      }
+      const env = getExecEnvWithGitIdentity(ghToken, ghUsername);
+
       // Check for uncommitted changes
       const { stdout: status } = await execAsync('git status --porcelain', {
         cwd: worktreePath,
+        env,
+        maxBuffer: MAX_BUFFER,
       });
 
       if (!status.trim()) {
@@ -45,11 +62,13 @@ export function createCommitHandler() {
       }
 
       // Stage all changes
-      await execAsync('git add -A', { cwd: worktreePath });
+      await execAsync('git add -A', { cwd: worktreePath, env, maxBuffer: MAX_BUFFER });
 
       // Create commit
       await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
         cwd: worktreePath,
+        env,
+        maxBuffer: MAX_BUFFER,
       });
 
       // Get commit hash

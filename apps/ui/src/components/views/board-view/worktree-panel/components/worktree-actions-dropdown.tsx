@@ -178,11 +178,12 @@ export function WorktreeActionsDropdown({
   const hasPR = !!worktree.pr;
 
   // Check git operations availability
+  // Commit + discard only need isGitRepo; push/pull/PR also need hasCommits
   const canPerformGitOps = gitRepoStatus.isGitRepo && gitRepoStatus.hasCommits;
   const gitOpsDisabledReason = !gitRepoStatus.isGitRepo
     ? 'Not a git repository'
     : !gitRepoStatus.hasCommits
-      ? 'Repository has no commits yet'
+      ? 'Commit first to enable push/pull/PR'
       : null;
 
   return (
@@ -203,12 +204,22 @@ export function WorktreeActionsDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
-        {/* Warning label when git operations are not available */}
-        {!canPerformGitOps && (
+        {/* Warning label when not a git repository */}
+        {!gitRepoStatus.isGitRepo && (
           <>
             <DropdownMenuLabel className="text-xs flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <AlertCircle className="w-3.5 h-3.5" />
-              {gitOpsDisabledReason}
+              Not a git repository
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        {/* Info hint when git repo has no commits yet */}
+        {gitRepoStatus.isGitRepo && !gitRepoStatus.hasCommits && (
+          <>
+            <DropdownMenuLabel className="text-xs flex items-center gap-2 text-muted-foreground">
+              <GitCommit className="w-3.5 h-3.5" />
+              No commits yet — commit to enable push/pull/PR
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>

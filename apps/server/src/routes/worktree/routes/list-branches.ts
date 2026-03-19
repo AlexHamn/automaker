@@ -1,13 +1,14 @@
 /**
  * POST /list-branches endpoint - List all local branches and optionally remote branches
  *
- * Note: Git repository validation (isGitRepo, hasCommits) is handled by
- * the requireValidWorktree middleware in index.ts
+ * Handles git status checks inline (isGitRepo, hasCommits) so the response
+ * always returns 200 with a status code the frontend can interpret.
  */
 
 import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { isGitRepo } from '@automaker/git-utils';
 import { getErrorMessage, logWorktreeError } from '../common.js';
 
 const execAsync = promisify(exec);
@@ -30,6 +31,56 @@ export function createListBranchesHandler() {
         res.status(400).json({
           success: false,
           error: 'worktreePath required',
+        });
+        return;
+      }
+
+      // Check if this is a git repo at all
+      if (!(await isGitRepo(worktreePath))) {
+        res.json({
+          success: true,
+          code: 'NOT_GIT_REPO',
+          result: {
+            currentBranch: '',
+            branches: [],
+            aheadCount: 0,
+            behindCount: 0,
+            hasRemoteBranch: false,
+            hasAnyRemotes: false,
+          },
+        });
+        return;
+      }
+
+      // Check if repo has any commits
+      let repoHasCommits = true;
+      try {
+        await execAsync('git rev-parse HEAD', { cwd: worktreePath });
+      } catch {
+        repoHasCommits = false;
+      }
+
+      // If no commits yet, return early with minimal info
+      if (!repoHasCommits) {
+        let hasAnyRemotes = false;
+        try {
+          const { stdout: remotesOutput } = await execAsync('git remote', { cwd: worktreePath });
+          hasAnyRemotes = remotesOutput.trim().length > 0;
+        } catch {
+          hasAnyRemotes = false;
+        }
+
+        res.json({
+          success: true,
+          code: 'NO_COMMITS',
+          result: {
+            currentBranch: 'master',
+            branches: [],
+            aheadCount: 0,
+            behindCount: 0,
+            hasRemoteBranch: false,
+            hasAnyRemotes,
+          },
         });
         return;
       }

@@ -290,7 +290,7 @@ export function TerminalPanel({
     );
   };
 
-  // Copy selected text to clipboard
+  // Copy selected text to clipboard (with execCommand fallback for HTTP)
   const copySelection = useCallback(async (): Promise<boolean> => {
     const terminal = xtermRef.current;
     if (!terminal) return false;
@@ -303,22 +303,43 @@ export function TerminalPanel({
       return false;
     }
 
-    try {
-      // Strip any ANSI escape codes that might be in the selection
-      const cleanText = stripAnsi(selection);
-      await navigator.clipboard.writeText(cleanText);
-      toast.success('Copied to clipboard');
-      return true;
-    } catch (err) {
-      logger.error('Copy failed:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      toast.error('Copy failed', {
-        description: errorMessage.includes('permission')
-          ? 'Clipboard permission denied'
-          : 'Could not access clipboard',
-      });
-      return false;
+    // Strip any ANSI escape codes that might be in the selection
+    const cleanText = stripAnsi(selection);
+
+    // Try modern Clipboard API first (requires HTTPS)
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(cleanText);
+        toast.success('Copied to clipboard');
+        return true;
+      } catch {
+        // Fall through to execCommand fallback
+      }
     }
+
+    // Fallback: document.execCommand('copy') works over HTTP
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = cleanText;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (ok) {
+        toast.success('Copied to clipboard');
+        return true;
+      }
+    } catch {
+      // Fall through to error
+    }
+
+    toast.error('Copy failed', {
+      description: 'Could not access clipboard',
+    });
+    return false;
   }, []);
   copySelectionRef.current = copySelection;
 

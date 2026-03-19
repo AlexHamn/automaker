@@ -55,10 +55,12 @@ import { createDiscardChangesHandler } from './routes/discard-changes.js';
 import { createListRemotesHandler } from './routes/list-remotes.js';
 import { createAddRemoteHandler } from './routes/add-remote.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { GitHubAccountManager } from '../../services/github-account-manager.js';
 
 export function createWorktreeRoutes(
   events: EventEmitter,
-  settingsService?: SettingsService
+  settingsService?: SettingsService,
+  githubAccountManager?: GitHubAccountManager
 ): Router {
   const router = Router();
 
@@ -75,13 +77,13 @@ export function createWorktreeRoutes(
   );
   router.post('/create', validatePathParams('projectPath'), createCreateHandler(events));
   router.post('/delete', validatePathParams('projectPath', 'worktreePath'), createDeleteHandler());
-  router.post('/create-pr', createCreatePRHandler());
+  router.post('/create-pr', createCreatePRHandler(githubAccountManager));
   router.post('/pr-info', createPRInfoHandler());
   router.post(
     '/commit',
     validatePathParams('worktreePath'),
     requireGitRepoOnly,
-    createCommitHandler()
+    createCommitHandler(githubAccountManager)
   );
   router.post(
     '/generate-commit-message',
@@ -93,7 +95,7 @@ export function createWorktreeRoutes(
     '/push',
     validatePathParams('worktreePath'),
     requireValidWorktree,
-    createPushHandler()
+    createPushHandler(githubAccountManager)
   );
   router.post(
     '/pull',
@@ -102,12 +104,7 @@ export function createWorktreeRoutes(
     createPullHandler()
   );
   router.post('/checkout-branch', requireValidWorktree, createCheckoutBranchHandler());
-  router.post(
-    '/list-branches',
-    validatePathParams('worktreePath'),
-    requireValidWorktree,
-    createListBranchesHandler()
-  );
+  router.post('/list-branches', validatePathParams('worktreePath'), createListBranchesHandler());
   router.post('/switch-branch', requireValidWorktree, createSwitchBranchHandler());
   router.post('/open-in-editor', validatePathParams('worktreePath'), createOpenInEditorHandler());
   router.post(

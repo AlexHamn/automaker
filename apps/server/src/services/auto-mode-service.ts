@@ -440,6 +440,7 @@ export class AutoModeService {
   private config: AutoModeConfig | null = null;
   private pendingApprovals = new Map<string, PendingApproval>();
   private settingsService: SettingsService | null = null;
+  private accountManager: import('./account-manager.js').AccountManager | null = null;
   // Track consecutive failures to detect quota/API issues (legacy global, now per-project in autoLoopsByProject)
   private consecutiveFailures: { timestamp: number; error: string }[] = [];
   private pausedDueToFailures = false;
@@ -449,6 +450,13 @@ export class AutoModeService {
   constructor(events: EventEmitter, settingsService?: SettingsService) {
     this.events = events;
     this.settingsService = settingsService ?? null;
+  }
+
+  /**
+   * Set the AccountManager for multi-account failover support.
+   */
+  setAccountManager(manager: import('./account-manager.js').AccountManager): void {
+    this.accountManager = manager;
   }
 
   /**
@@ -517,6 +525,7 @@ export class AutoModeService {
     entry.leaseCount -= 1;
     if (entry.leaseCount <= 0) {
       this.runningFeatures.delete(featureId);
+      this.accountManager?.releaseFeatureAccount(featureId);
     }
   }
 
@@ -965,6 +974,20 @@ export class AutoModeService {
           }
           await this.sleep(10000);
           continue;
+        }
+
+        // Pre-assign accounts to pending features for concurrent distribution
+        if (this.accountManager) {
+          const settings = await this.settingsService?.getGlobalSettings();
+          const failoverSettings = settings?.accountFailoverSettings;
+          if (failoverSettings?.enabled && failoverSettings?.distributeConcurrent) {
+            const launchableIds = pendingFeatures
+              .filter((f) => !this.runningFeatures.has(f.id) && !this.isFeatureFinished(f))
+              .map((f) => f.id);
+            if (launchableIds.length > 0) {
+              await this.accountManager.distributeAccounts(launchableIds);
+            }
+          }
         }
 
         // Find a feature not currently running and not yet finished
@@ -1652,6 +1675,31 @@ export class AutoModeService {
           errorType: errorInfo.type,
           projectPath,
         });
+
+        // Check for rate limit failover to another account
+        if ((errorInfo.isRateLimit || errorInfo.isQuotaExhausted) && this.accountManager) {
+          const failedAccountId = (error as any).accountId as string | undefined;
+          if (failedAccountId) {
+            const resetAt = new Date(
+              Date.now() + (errorInfo.retryAfter || 60) * 1000
+            ).toISOString();
+            await this.accountManager.recordRateLimitEvent(failedAccountId, 'unknown', resetAt);
+
+            const nextAccount = await this.accountManager.getBestAvailableAccount();
+            if (nextAccount && nextAccount.id !== failedAccountId) {
+              // Failover available — don't pause, let auto-loop retry with new account
+              logger.info(`Account failover: ${failedAccountId} -> ${nextAccount.name}`);
+              this.events.emit('account:failover', {
+                fromAccountId: failedAccountId,
+                toAccountId: nextAccount.id,
+                toAccountName: nextAccount.name,
+              });
+              this.recordSuccessForProject(projectPath); // Reset failure counter
+              // Feature already set back to 'backlog' above — auto-loop will pick it up
+              return;
+            }
+          }
+        }
 
         // Track this failure and check if we should pause auto mode
         // This handles both specific quota/rate limit errors AND generic failures
@@ -4224,6 +4272,11 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
     // Get credentials for API calls (model comes from request, no phase model)
     const credentials = await this.settingsService?.getCredentials();
 
+    // Resolve account credentials for multi-account failover (only for direct Anthropic, not providers)
+    let accountApiKey: string | undefined;
+    let accountHomeDir: string | undefined;
+    let accountId: string | null = null;
+
     // Try to find a provider for the model (if it's a provider model like "GLM-4.7")
     // This allows users to select provider models in the Auto Mode / Feature execution
     let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
@@ -4249,6 +4302,34 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       ? stripProviderPrefix(providerResolvedModel)
       : bareModel;
 
+    // Resolve account for multi-account failover (only when not using a ClaudeCompatibleProvider)
+    if (this.accountManager && !claudeCompatibleProvider) {
+      const assigned = this.accountManager.getAccountForFeature(featureId);
+      if (assigned) {
+        const settings = await this.settingsService?.getGlobalSettings();
+        const accounts = settings?.anthropicAccounts ?? [];
+        const account = accounts.find((a) => a.id === assigned);
+        if (account) {
+          if (account.authType === 'oauth') {
+            accountHomeDir = await this.accountManager.getAccountHomeDir(account);
+          } else {
+            accountApiKey = account.apiKey;
+          }
+          accountId = account.id;
+        }
+      } else {
+        const result = await this.accountManager.getActiveAuth();
+        if (result) {
+          accountApiKey = result.apiKey;
+          accountHomeDir = result.accountHomeDir;
+          accountId = result.accountId;
+          if (accountId) {
+            this.accountManager.assignAccountToFeature(featureId, accountId);
+          }
+        }
+      }
+    }
+
     const executeOptions: ExecuteOptions = {
       prompt: promptContent,
       model: effectiveBareModel,
@@ -4262,6 +4343,9 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       thinkingLevel: options?.thinkingLevel, // Pass thinking level for extended thinking
       credentials, // Pass credentials for resolving 'credentials' apiKeySource
       claudeCompatibleProvider, // Pass provider for alternative endpoint configuration (GLM, MiniMax, etc.)
+      accountApiKey, // Multi-account failover API key
+      accountHomeDir, // Multi-account failover OAuth per-account HOME dir
+      accountId, // Account tracking for rate limit events
     };
 
     // Execute via provider

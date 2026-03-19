@@ -1813,6 +1813,7 @@ export function BoardView() {
         open={showCommitWorktreeDialog}
         onOpenChange={setShowCommitWorktreeDialog}
         worktree={selectedWorktreeForAction}
+        projectPath={currentProject?.path}
         onCommitted={() => {
           setWorktreeRefreshKey((k) => k + 1);
           setSelectedWorktreeForAction(null);
