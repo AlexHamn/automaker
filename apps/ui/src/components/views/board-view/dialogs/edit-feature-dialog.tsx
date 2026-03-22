@@ -95,7 +95,6 @@ export function EditFeatureDialog({
   projectPath,
 }: EditFeatureDialogProps) {
   const navigate = useNavigate();
-  const projectPath = useAppStore((s) => s.currentProject?.path);
   const [editingFeature, setEditingFeature] = useState<Feature | null>(feature);
   // Derive initial workMode from feature's branchName
   const [workMode, setWorkMode] = useState<WorkMode>(() => {
