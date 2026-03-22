@@ -10,6 +10,7 @@ import {
   GitPullRequest,
   Lightbulb,
   Brain,
+  Database,
   Network,
   Bell,
   Settings,
@@ -128,6 +129,11 @@ export function useNavigation({
         label: 'Memory',
         icon: Brain,
         shortcut: shortcuts.memory,
+      },
+      {
+        id: 'knowledge-base',
+        label: 'Knowledge Base',
+        icon: Database,
       },
     ];
 

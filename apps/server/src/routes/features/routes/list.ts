@@ -9,6 +9,7 @@ import type { Request, Response } from 'express';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { getConvexRAGService } from '../../../services/convex-rag-service.js';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
+import { getFileWatcherService } from '../../../services/file-watcher-service.js';
 import { getErrorMessage, logError } from '../common.js';
 import { createLogger } from '@automaker/utils';
 
@@ -51,6 +52,11 @@ export function createListHandler(featureLoader: FeatureLoader, autoModeService?
       const ragService = getConvexRAGService();
       if (ragService.isAvailable()) {
         ragService.indexProjectIfStale(projectPath).catch(() => {});
+        // Start watching this project for file changes (idempotent)
+        const watcher = getFileWatcherService();
+        if (watcher) {
+          watcher.watchProject(projectPath);
+        }
       }
     } catch (error) {
       logError(error, 'List features failed');

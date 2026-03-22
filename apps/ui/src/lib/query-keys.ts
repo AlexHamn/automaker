@@ -257,6 +257,26 @@ export const queryKeys = {
   },
 
   // ============================================
+  // RAG
+  // ============================================
+  rag: {
+    /** Similar implementations for a description */
+    similar: (projectPath: string, description: string, category?: string) =>
+      ['rag', 'similar', projectPath, description, category] as const,
+    /** Gotcha warnings for a task description */
+    gotchas: (projectPath: string, description: string) =>
+      ['rag', 'gotchas', projectPath, description] as const,
+    /** Knowledge base status for a project */
+    status: (projectPath: string) => ['rag', 'status', projectPath] as const,
+    /** Knowledge base search results */
+    search: (projectPath: string, query: string, contentType?: string) =>
+      ['rag', 'search', projectPath, query, contentType] as const,
+    /** Risk assessment for a feature */
+    risk: (projectPath: string, title: string, description: string, category?: string) =>
+      ['rag', 'risk', projectPath, title, description, category] as const,
+  },
+
+  // ============================================
   // File System
   // ============================================
   fs: {

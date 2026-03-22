@@ -90,3 +90,18 @@ export type { CursorPermissionsData } from './use-cursor-permissions';
 
 // Workspace
 export { useWorkspaceDirectories } from './use-workspace';
+
+// RAG
+export { useSimilarImplementations } from './use-similar-implementations';
+export type { SimilarImplementationsResult } from './use-similar-implementations';
+export { useGotchaWarnings } from './use-gotcha-warnings';
+export type { GotchaWarningsResult } from './use-gotcha-warnings';
+export {
+  useKnowledgeBaseStatus,
+  useKnowledgeBaseSearch,
+  useIndexProject,
+  useIndexCode,
+} from './use-knowledge-base';
+export type { KBStatus, KBFile, KBSearchResult, KBIndexResult } from './use-knowledge-base';
+export { useRiskAssessment } from './use-risk-assessment';
+export type { RiskAssessmentResult } from './use-risk-assessment';

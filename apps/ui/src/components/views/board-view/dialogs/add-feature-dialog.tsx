@@ -42,6 +42,9 @@ import {
 import type { WorkMode } from '../shared';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { SimilarImplementations } from '../components/similar-implementations';
+import { GotchaWarnings } from '../components/gotcha-warnings';
+import { RiskIndicator } from '../components/risk-indicator';
 import {
   getAncestors,
   formatAncestorContextForPrompt,
@@ -198,6 +201,7 @@ export function AddFeatureDialog({
     defaultFeatureModel,
     currentProject,
   } = useAppStore();
+  const projectPath = useAppStore((s) => s.currentProject?.path);
 
   // Use project-level default feature model if set, otherwise fall back to global
   const effectiveDefaultFeatureModel = currentProject?.defaultFeatureModel ?? defaultFeatureModel;
@@ -470,6 +474,18 @@ export function AddFeatureDialog({
                 onPreviewMapChange={setPreviewMap}
                 autoFocus
                 error={descriptionError}
+              />
+              <SimilarImplementations
+                projectPath={projectPath}
+                description={description}
+                category={category}
+              />
+              <GotchaWarnings projectPath={projectPath} description={description} />
+              <RiskIndicator
+                projectPath={projectPath}
+                title={title}
+                description={description}
+                category={category}
               />
             </div>
 

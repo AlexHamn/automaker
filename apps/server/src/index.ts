@@ -336,6 +336,16 @@ eventHookService.initialize(events, settingsService, eventHistoryService, featur
   if (ragService.isEnabled()) {
     if (ragService.isAvailable()) {
       logger.info('Convex RAG service initialized');
+      // Initialize file watcher for incremental re-indexing
+      try {
+        const { getFileWatcherService } = await import('./services/file-watcher-service.js');
+        getFileWatcherService(ragService);
+        logger.info('RAG file watcher service initialized');
+      } catch (error) {
+        logger.warn('Failed to initialize RAG file watcher', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     } else {
       logger.warn('Convex RAG service enabled but not configured (CONVEX_URL not set)');
     }

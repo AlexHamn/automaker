@@ -1912,6 +1912,25 @@ export class HttpApiClient implements ElectronAPI {
     }> => this.post('/api/features/check-conflicts', { projectPath, data }),
   };
 
+  // RAG API
+  rag = {
+    searchSimilar: (projectPath: string, description: string, category?: string, limit?: number) =>
+      this.post('/api/rag/similar', { projectPath, description, category, limit }),
+    searchGotchas: (projectPath: string, taskDescription: string, limit?: number) =>
+      this.post('/api/rag/gotchas', { projectPath, taskDescription, limit }),
+    getStatus: (projectPath: string) => this.post('/api/rag/status', { projectPath }),
+    indexProject: (projectPath: string) => this.post('/api/rag/index', { projectPath }),
+    indexCode: (projectPath: string) => this.post('/api/rag/index-code', { projectPath }),
+    search: (projectPath: string, query: string, contentType?: string, limit?: number) =>
+      this.post('/api/rag/search', { projectPath, query, contentType, limit }),
+    assessRisk: (
+      projectPath: string,
+      featureTitle: string,
+      featureDescription: string,
+      category?: string
+    ) => this.post('/api/rag/risk', { projectPath, featureTitle, featureDescription, category }),
+  };
+
   // Auto Mode API
   autoMode: AutoModeAPI = {
     start: (projectPath: string, branchName?: string | null, maxConcurrency?: number) =>

@@ -306,6 +306,163 @@ export const getIndexedContent = query({
 });
 
 /**
+ * Index an agent output from a completed feature
+ *
+ * Agent outputs contain implementation details, decisions, and code changes
+ * that can inform future feature implementations via semantic search.
+ */
+export const indexAgentOutput = action({
+  args: {
+    projectId: v.string(),
+    featureId: v.string(),
+    featureTitle: v.string(),
+    category: v.string(),
+    agentOutput: v.string(),
+    contentHash: v.string(),
+    wasSuccessful: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const {
+      projectId,
+      featureId,
+      featureTitle,
+      category,
+      agentOutput,
+      contentHash,
+      wasSuccessful,
+    } = args;
+
+    const namespace = `project:${projectId}`;
+    const key = `feature:${featureId}`;
+
+    // Higher importance for successful implementations
+    const importance = wasSuccessful ? 0.8 : 0.4;
+
+    // Prepend feature metadata for better embeddings
+    const enrichedContent = [
+      `# Feature: ${featureTitle}`,
+      `Category: ${category}`,
+      `Status: ${wasSuccessful ? 'Successful' : 'Failed'}`,
+      '',
+      agentOutput,
+    ].join('\n');
+
+    // Add content to RAG with all 4 required filter values
+    await rag.add(ctx, {
+      namespace,
+      key,
+      text: enrichedContent,
+      contentHash,
+      title: featureTitle,
+      importance,
+      filterValues: [
+        { name: 'projectId', value: projectId },
+        { name: 'contentType', value: 'agent-output' },
+        { name: 'category', value: category },
+        { name: 'importance', value: importance },
+      ],
+    });
+
+    // Upsert the indexed content record
+    const filePath = `features/${featureId}/agent-output.md`;
+    await ctx.runMutation(internal.indexing.upsertIndexedContentInternal, {
+      projectId,
+      filePath,
+      contentType: 'agent-output',
+      checksum: contentHash,
+      title: featureTitle,
+      category,
+      importance,
+      vectorId: key,
+    });
+
+    return { success: true, key };
+  },
+});
+
+/**
+ * Index a code pattern extracted from a source file
+ *
+ * Code patterns include exported functions, components, types, and
+ * architectural information that helps agents understand the codebase.
+ */
+export const indexCodePattern = action({
+  args: {
+    projectId: v.string(),
+    filePath: v.string(),
+    content: v.string(),
+    contentHash: v.string(),
+    patternType: v.string(),
+    title: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { projectId, filePath, content, contentHash, patternType, title } = args;
+
+    const namespace = `project:${projectId}`;
+    const key = `code:${filePath}`;
+    const importance = 0.6;
+
+    await rag.add(ctx, {
+      namespace,
+      key,
+      text: content,
+      contentHash,
+      title: title || filePath,
+      importance,
+      filterValues: [
+        { name: 'projectId', value: projectId },
+        { name: 'contentType', value: 'code' },
+        { name: 'category', value: patternType },
+        { name: 'importance', value: importance },
+      ],
+    });
+
+    await ctx.runMutation(internal.indexing.upsertIndexedContentInternal, {
+      projectId,
+      filePath,
+      contentType: 'code',
+      checksum: contentHash,
+      title: title || filePath,
+      category: patternType,
+      importance,
+      vectorId: key,
+    });
+
+    return { success: true, key };
+  },
+});
+
+/**
+ * Remove indexed content for a deleted file
+ *
+ * Removes the tracking record from the indexedContent table.
+ * The RAG component will handle cleanup of orphaned vectors.
+ */
+export const removeIndexedContent = mutation({
+  args: {
+    projectId: v.string(),
+    filePath: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { projectId, filePath } = args;
+
+    const existing = await ctx.db
+      .query('indexedContent')
+      .withIndex('by_project_and_path', (q) =>
+        q.eq('projectId', projectId).eq('filePath', filePath)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return { removed: true, id: existing._id };
+    }
+
+    return { removed: false };
+  },
+});
+
+/**
  * List all indexed content for a project
  *
  * Returns metadata about all files indexed for the given project.
