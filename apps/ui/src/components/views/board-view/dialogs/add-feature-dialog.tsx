@@ -201,7 +201,6 @@ export function AddFeatureDialog({
     defaultFeatureModel,
     currentProject,
   } = useAppStore();
-  const projectPath = useAppStore((s) => s.currentProject?.path);
 
   // Use project-level default feature model if set, otherwise fall back to global
   const effectiveDefaultFeatureModel = currentProject?.defaultFeatureModel ?? defaultFeatureModel;
