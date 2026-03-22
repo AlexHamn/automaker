@@ -29,14 +29,12 @@ export const searchFeatureContext = action({
     const namespace = `project:${projectId}`;
 
     // Build filters — always filter by projectId
-    const filters: Array<{ projectId: string; contentType?: string }> = contentType
-      ? [{ projectId, contentType }]
-      : [{ projectId }];
+    const filters = contentType ? [{ projectId, contentType }] : [{ projectId }];
 
     const result = await rag.search(ctx, {
       namespace,
       query,
-      filters,
+      filters: filters as unknown as Parameters<typeof rag.search>[1]['filters'],
       limit,
       vectorScoreThreshold,
       chunkContext: { before: 1, after: 1 },
