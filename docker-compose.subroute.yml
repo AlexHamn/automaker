@@ -58,6 +58,10 @@ services:
       # Allow CORS from the public IP
       - CORS_ORIGIN=http://49.12.144.8
       - IS_CONTAINERIZED=true
+      # RAG (Convex) configuration
+      - AUTOMAKER_RAG_ENABLED=${AUTOMAKER_RAG_ENABLED:-false}
+      - CONVEX_URL=${CONVEX_URL:-}
+      - CONVEX_DEPLOY_KEY=${CONVEX_DEPLOY_KEY:-}
     volumes:
       - automaker-data:/data
       - automaker-projects:/projects
