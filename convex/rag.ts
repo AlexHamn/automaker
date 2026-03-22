@@ -18,6 +18,9 @@ type FilterTypes = {
  * Uses text-embedding-3-small model with 1536 dimensions
  * for efficient semantic search across indexed content.
  *
+ * Requires OPENAI_API_KEY to be set in the Convex dashboard
+ * environment variables for the deployment.
+ *
  * Chunk options are specified when adding content via rag.add():
  * - maxChunkSize: 1000 (recommended)
  * - overlapSize: 100 (recommended)
