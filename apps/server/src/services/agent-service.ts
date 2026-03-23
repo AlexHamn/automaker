@@ -300,13 +300,21 @@ export class AgentService {
         }
       }
 
-      // Load project context files (CLAUDE.md, CODE_QUALITY.md, etc.) and memory files
-      // Use the user's message as task context for smart memory selection
+      // Determine if RAG is available — if so, skip loading all context files into the prompt
+      // and let RAG provide only the relevant chunks via semantic search.
+      // This prevents context overflow when projects have many large documentation files.
+      const ragService = getConvexRAGService();
+      const ragAvailable = ragService.isAvailable();
+
+      // Load project context files and memory files.
+      // When RAG is available, skip bulk context file loading — RAG will provide relevant chunks.
+      // Memory files are still loaded for smart selection and usage tracking.
       const contextResult = await loadContextFiles({
         projectPath: effectiveWorkDir,
         fsModule: secureFs as Parameters<typeof loadContextFiles>[0]['fsModule'],
+        includeContextFiles: !ragAvailable,
         taskContext: {
-          title: message.substring(0, 200), // Use first 200 chars as title
+          title: message.substring(0, 200),
           description: message,
         },
       });
@@ -317,34 +325,35 @@ export class AgentService {
 
       // Retrieve relevant context from RAG knowledge base (non-blocking)
       let ragContextSection = '';
-      try {
-        const ragService = getConvexRAGService();
-        const ragResult = await ragService.searchForAgent(effectiveWorkDir, message);
-        if (ragResult) {
-          ragContextSection = `\n\n${ragResult}`;
-        }
-        // Also search for relevant gotchas/warnings
+      if (ragAvailable) {
         try {
-          const gotchaResult = await ragService.searchGotchas(effectiveWorkDir, message);
-          if (gotchaResult.context && gotchaResult.chunksRetrieved > 0) {
-            ragContextSection += `\n\n## Known Issues & Gotchas\n\nThe following warnings were found in the project knowledge base:\n\n${gotchaResult.context}`;
+          const ragResult = await ragService.searchForAgent(effectiveWorkDir, message);
+          if (ragResult) {
+            ragContextSection = `\n\n${ragResult}`;
           }
-        } catch {
-          /* gotcha search is non-blocking */
-        }
-        // Search for relevant code patterns
-        try {
-          const codeResult = await ragService.findCodePatterns(effectiveWorkDir, message);
-          if (codeResult.context && codeResult.chunksRetrieved > 0) {
-            ragContextSection += `\n\n## Relevant Codebase Patterns\n\n${codeResult.context}`;
+          // Also search for relevant gotchas/warnings
+          try {
+            const gotchaResult = await ragService.searchGotchas(effectiveWorkDir, message);
+            if (gotchaResult.context && gotchaResult.chunksRetrieved > 0) {
+              ragContextSection += `\n\n## Known Issues & Gotchas\n\nThe following warnings were found in the project knowledge base:\n\n${gotchaResult.context}`;
+            }
+          } catch {
+            /* gotcha search is non-blocking */
           }
-        } catch {
-          /* code pattern search is non-blocking */
+          // Search for relevant code patterns
+          try {
+            const codeResult = await ragService.findCodePatterns(effectiveWorkDir, message);
+            if (codeResult.context && codeResult.chunksRetrieved > 0) {
+              ragContextSection += `\n\n## Relevant Codebase Patterns\n\n${codeResult.context}`;
+            }
+          } catch {
+            /* code pattern search is non-blocking */
+          }
+        } catch (error) {
+          this.logger.warn('[AgentService] RAG search failed, continuing without RAG context', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
         }
-      } catch (error) {
-        this.logger.warn('[AgentService] RAG search failed, continuing without RAG context', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
       }
 
       // Build combined system prompt with base prompt, context files, and RAG context

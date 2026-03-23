@@ -1498,11 +1498,14 @@ export class AutoModeService {
 
       // Build the prompt - use continuation prompt if provided (for recovery after plan approval)
       let prompt: string;
-      // Load project context files (CLAUDE.md, CODE_QUALITY.md, etc.) and memory files
-      // Context loader uses task context to select relevant memory files
+      // Load project context files and memory files.
+      // When RAG is available, skip bulk context file loading to prevent context overflow —
+      // RAG provides only the relevant chunks via semantic search.
+      const ragService = getConvexRAGService();
       const contextResult = await loadContextFiles({
         projectPath,
         fsModule: secureFs as Parameters<typeof loadContextFiles>[0]['fsModule'],
+        includeContextFiles: !ragService.isAvailable(),
         taskContext: {
           title: feature.title ?? '',
           description: feature.description ?? '',
@@ -1769,10 +1772,13 @@ export class AutoModeService {
     // Get customized prompts from settings
     const prompts = await getPromptCustomization(this.settingsService, '[AutoMode]');
 
-    // Load context files once with feature context for smart memory selection
+    // Load context files once with feature context for smart memory selection.
+    // Skip bulk context files when RAG is available to prevent context overflow.
+    const ragServiceForPipeline = getConvexRAGService();
     const contextResult = await loadContextFiles({
       projectPath,
       fsModule: secureFs as Parameters<typeof loadContextFiles>[0]['fsModule'],
+      includeContextFiles: !ragServiceForPipeline.isAvailable(),
       taskContext: {
         title: feature.title ?? '',
         description: feature.description ?? '',
@@ -2414,10 +2420,13 @@ Complete the pipeline step instructions above. Review the previous work and appl
     // Get customized prompts from settings
     const prompts = await getPromptCustomization(this.settingsService, '[AutoMode]');
 
-    // Load project context files (CLAUDE.md, CODE_QUALITY.md, etc.) - passed as system prompt
+    // Load project context files - passed as system prompt.
+    // Skip bulk context files when RAG is available to prevent context overflow.
+    const ragServiceForFollowUp = getConvexRAGService();
     const contextResult = await loadContextFiles({
       projectPath,
       fsModule: secureFs as Parameters<typeof loadContextFiles>[0]['fsModule'],
+      includeContextFiles: !ragServiceForFollowUp.isAvailable(),
       taskContext: {
         title: feature?.title ?? prompt.substring(0, 200),
         description: feature?.description ?? prompt,
