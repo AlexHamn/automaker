@@ -28,13 +28,18 @@ export const searchFeatureContext = action({
 
     const namespace = `project:${projectId}`;
 
-    // Build filters — always filter by projectId
-    const filters = contentType ? [{ projectId, contentType }] : [{ projectId }];
+    // Build filters in the { name, value } format required by the RAG component
+    const filters: Array<{ name: string; value: string | number }> = [
+      { name: 'projectId', value: projectId },
+    ];
+    if (contentType) {
+      filters.push({ name: 'contentType', value: contentType });
+    }
 
     const result = await rag.search(ctx, {
       namespace,
       query,
-      filters: filters as unknown as Parameters<typeof rag.search>[1]['filters'],
+      filters,
       limit,
       vectorScoreThreshold,
       chunkContext: { before: 1, after: 1 },
