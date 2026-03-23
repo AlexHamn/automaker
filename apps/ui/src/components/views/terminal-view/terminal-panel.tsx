@@ -263,6 +263,7 @@ export function TerminalPanel({
   themeRef.current = resolvedTheme;
   const copySelectionRef = useRef<() => Promise<boolean>>(() => Promise.resolve(false));
   const pasteFromClipboardRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const pasteTextRef = useRef<(text: string) => Promise<void>>(() => Promise.resolve());
 
   // Zoom functions - use the prop callback
   const zoomIn = useCallback(() => {
@@ -367,20 +368,11 @@ export function TerminalPanel({
   }, []);
 
   // Paste from clipboard
-  const pasteFromClipboard = useCallback(async () => {
-    const terminal = xtermRef.current;
-    if (!terminal || !wsRef.current) return;
+  const pasteText = useCallback(
+    async (text: string) => {
+      if (!text) return;
 
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text) {
-        toast.error('Nothing to paste', {
-          description: 'Clipboard is empty',
-        });
-        return;
-      }
-
-      if (wsRef.current.readyState !== WebSocket.OPEN) {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
         toast.error('Terminal not connected');
         return;
       }
@@ -395,17 +387,36 @@ export function TerminalPanel({
       }
 
       await sendTextInChunks(text);
-    } catch (err) {
-      logger.error('Paste failed:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    },
+    [sendTextInChunks]
+  );
+
+  const pasteFromClipboard = useCallback(async () => {
+    const terminal = xtermRef.current;
+    if (!terminal || !wsRef.current) return;
+
+    try {
+      // Try the Clipboard API first (works on HTTPS/localhost)
+      if (navigator.clipboard?.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          await pasteText(text);
+          return;
+        }
+      }
+      toast.error('Nothing to paste', {
+        description: 'Clipboard is empty or not accessible over HTTP. Use Ctrl+Shift+V instead.',
+      });
+    } catch {
+      // Clipboard API failed (likely HTTP) — trigger a native paste event
+      // so the browser provides clipboardData via the paste event listener
       toast.error('Paste failed', {
-        description: errorMessage.includes('permission')
-          ? 'Clipboard permission denied'
-          : 'Could not read from clipboard',
+        description: 'Clipboard not accessible over HTTP. Use Ctrl+Shift+V to paste via browser.',
       });
     }
-  }, [sendTextInChunks]);
+  }, [pasteText]);
   pasteFromClipboardRef.current = pasteFromClipboard;
+  pasteTextRef.current = pasteText;
 
   // Select all terminal content
   const selectAll = useCallback(() => {
@@ -644,6 +655,18 @@ export function TerminalPanel({
 
       // Open terminal
       terminal.open(terminalRef.current);
+
+      // Handle paste events from the browser (works over HTTP unlike navigator.clipboard)
+      // When Ctrl+V fires on HTTP, the browser's native paste event provides clipboardData
+      const terminalElement = terminalRef.current;
+      const handlePaste = (event: ClipboardEvent) => {
+        const text = event.clipboardData?.getData('text');
+        if (text && pasteTextRef.current) {
+          event.preventDefault();
+          pasteTextRef.current(text);
+        }
+      };
+      terminalElement.addEventListener('paste', handlePaste);
 
       // Register custom link provider for file paths
       // Detects patterns like /path/to/file.ts:123:45 or ./src/file.js:10
@@ -938,9 +961,15 @@ export function TerminalPanel({
 
         // Ctrl+V / Cmd+V or Ctrl+Shift+V / Cmd+Shift+V - Paste
         if (modKey && !otherModKey && !event.altKey && code === 'KeyV') {
-          event.preventDefault();
-          pasteFromClipboardRef.current();
-          return false;
+          // On HTTPS/localhost, use the Clipboard API directly
+          if (window.isSecureContext) {
+            event.preventDefault();
+            pasteFromClipboardRef.current();
+            return false;
+          }
+          // On HTTP, don't preventDefault — let the browser fire the native
+          // paste event so we can read clipboardData from the paste listener
+          return true;
         }
 
         // Ctrl+A / Cmd+A - Select all
@@ -968,6 +997,9 @@ export function TerminalPanel({
     // Cleanup
     return () => {
       mounted = false;
+
+      // Remove paste event listener
+      terminalElement.removeEventListener('paste', handlePaste);
 
       // Dispose focus handler to prevent memory leak
       if (focusHandlerRef.current) {
