@@ -79,6 +79,50 @@ import { getConvexRAGService } from './convex-rag-service.js';
 const execAsync = promisify(exec);
 
 /**
+ * Entries that should be in .gitignore for any project using Automaker.
+ * Prevents test artifacts and build outputs from causing commit failures.
+ */
+const GITIGNORE_ENTRIES = [
+  '# Test artifacts',
+  'test-results/',
+  'playwright-report/',
+  'blob-report/',
+  'coverage/',
+  '',
+  '# Build artifacts',
+  '.automaker/features/*/raw-output.jsonl',
+];
+
+/**
+ * Ensure common test/build artifact paths are in .gitignore.
+ * Appends missing entries without duplicating existing ones.
+ */
+async function ensureGitignoreEntries(workDir: string): Promise<void> {
+  const gitignorePath = path.join(workDir, '.gitignore');
+  try {
+    let content = '';
+    try {
+      content = (await secureFs.readFile(gitignorePath, 'utf-8')) as string;
+    } catch {
+      // .gitignore doesn't exist yet
+    }
+
+    const existingLines = new Set(content.split('\n').map((l) => l.trim()));
+    const missing = GITIGNORE_ENTRIES.filter((entry) => entry && !existingLines.has(entry));
+
+    if (missing.length > 0) {
+      const suffix = content.endsWith('\n') || content === '' ? '' : '\n';
+      const additions = `${suffix}\n# Added by Automaker\n${missing.join('\n')}\n`;
+      await secureFs.writeFile(gitignorePath, content + additions);
+      logger.info('Updated .gitignore with common artifact paths');
+    }
+  } catch (error) {
+    // Non-blocking — don't fail the commit over this
+    logger.warn('Failed to update .gitignore:', error);
+  }
+}
+
+/**
  * Get the current branch name for a git repository
  * @param projectPath - Path to the git repository
  * @returns The current branch name, or null if not in a git repo or on detached HEAD
@@ -2811,6 +2855,9 @@ Address the follow-up instructions above. Review the previous work and make the 
       } catch (error) {
         logger.warn(`Could not determine branch-specific files: ${error}`);
       }
+
+      // Ensure common test/build artifacts are in .gitignore before committing
+      await ensureGitignoreEntries(workDir);
 
       // Stage files
       if (filesToStage.length > 0) {
