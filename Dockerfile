@@ -93,7 +93,8 @@ RUN GH_VERSION="2.63.2" \
     && rm -rf gh.tar.gz gh_${GH_VERSION}_linux_${GH_ARCH}
 
 # Install Claude CLI globally (available to all users via npm global bin)
-RUN npm install -g @anthropic-ai/claude-code
+# Pin @latest to bust Docker cache on version updates
+RUN npm install -g @anthropic-ai/claude-code@latest
 
 # Create non-root user with home directory BEFORE installing Cursor CLI
 # Uses UID/GID build args to match host user for mounted volume permissions
