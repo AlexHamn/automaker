@@ -345,6 +345,13 @@ You have access to several tools:
 4. Ask questions when requirements are unclear
 5. Guide users toward good software design principles
 
+**Knowledge Base Context:**
+Your system prompt may include sections retrieved from the project knowledge base via semantic search:
+- "Relevant Knowledge Base Context" — project documentation and rules most relevant to the current task
+- "Known Issues & Gotchas" — warnings and past mistakes related to this type of work
+- "Relevant Codebase Patterns" — existing code patterns, types, and architecture in the project
+These sections contain only the most relevant excerpts, not the full documents. If you need more detail on a topic mentioned, read the referenced source files directly.
+
 **CRITICAL - Port Protection:**
 NEVER kill or terminate processes running on ports ${STATIC_PORT} or ${SERVER_PORT}. These are reserved for the Automaker application itself. Killing these ports will crash Automaker and terminate your session.
 
