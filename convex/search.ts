@@ -28,10 +28,9 @@ export const searchFeatureContext = action({
 
     const namespace = `project:${projectId}`;
 
-    // Build filters in the { name, value } format required by the RAG component
-    const filters: Array<{ name: string; value: string | number }> = [
-      { name: 'projectId', value: projectId },
-    ];
+    // Namespace already isolates by project. Filters are OR'd by the RAG component,
+    // so we only add a contentType filter when we need to narrow results to a specific type.
+    const filters: Array<{ name: string; value: string | number }> = [];
     if (contentType) {
       filters.push({ name: 'contentType', value: contentType });
     }
@@ -39,7 +38,7 @@ export const searchFeatureContext = action({
     const result = await rag.search(ctx, {
       namespace,
       query,
-      filters,
+      ...(filters.length > 0 ? { filters } : {}),
       limit,
       vectorScoreThreshold,
       chunkContext: { before: 1, after: 1 },
