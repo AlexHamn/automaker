@@ -366,21 +366,21 @@ describe('claude-provider.ts', () => {
       expect(models).toHaveLength(4);
     });
 
-    it('should include Claude Opus 4.5', () => {
+    it('should include Claude Opus 4.6', () => {
       const models = provider.getAvailableModels();
 
-      const opus = models.find((m) => m.id === 'claude-opus-4-5-20251101');
+      const opus = models.find((m) => m.id === 'claude-opus-4-6-20260220');
       expect(opus).toBeDefined();
-      expect(opus?.name).toBe('Claude Opus 4.5');
+      expect(opus?.name).toBe('Claude Opus 4.6');
       expect(opus?.provider).toBe('anthropic');
     });
 
-    it('should include Claude Sonnet 4', () => {
+    it('should include Claude Sonnet 4.6', () => {
       const models = provider.getAvailableModels();
 
-      const sonnet = models.find((m) => m.id === 'claude-sonnet-4-20250514');
+      const sonnet = models.find((m) => m.id === 'claude-sonnet-4-6-20260218');
       expect(sonnet).toBeDefined();
-      expect(sonnet?.name).toBe('Claude Sonnet 4');
+      expect(sonnet?.name).toBe('Claude Sonnet 4.6');
     });
 
     it('should include Claude 3.5 Sonnet', () => {
@@ -400,7 +400,7 @@ describe('claude-provider.ts', () => {
     it('should mark Opus as default', () => {
       const models = provider.getAvailableModels();
 
-      const opus = models.find((m) => m.id === 'claude-opus-4-5-20251101');
+      const opus = models.find((m) => m.id === 'claude-opus-4-6-20260220');
       expect(opus?.default).toBe(true);
     });
 
@@ -417,7 +417,7 @@ describe('claude-provider.ts', () => {
       const models = provider.getAvailableModels();
 
       models.forEach((model) => {
-        expect(model.contextWindow).toBe(200000);
+        expect(model.contextWindow).toBeGreaterThanOrEqual(200000);
       });
     });
 

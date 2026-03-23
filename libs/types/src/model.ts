@@ -17,8 +17,8 @@ export type ClaudeCanonicalId = 'claude-haiku' | 'claude-sonnet' | 'claude-opus'
  */
 export const CLAUDE_CANONICAL_MAP: Record<ClaudeCanonicalId, string> = {
   'claude-haiku': 'claude-haiku-4-5-20251001',
-  'claude-sonnet': 'claude-sonnet-4-5-20250929',
-  'claude-opus': 'claude-opus-4-5-20251101',
+  'claude-sonnet': 'claude-sonnet-4-6-20260218',
+  'claude-opus': 'claude-opus-4-6-20260220',
 } as const;
 
 /**
@@ -28,8 +28,8 @@ export const CLAUDE_CANONICAL_MAP: Record<ClaudeCanonicalId, string> = {
  */
 export const CLAUDE_MODEL_MAP: Record<string, string> = {
   haiku: 'claude-haiku-4-5-20251001',
-  sonnet: 'claude-sonnet-4-5-20250929',
-  opus: 'claude-opus-4-5-20251101',
+  sonnet: 'claude-sonnet-4-6-20260218',
+  opus: 'claude-opus-4-6-20260220',
 } as const;
 
 /**
@@ -96,7 +96,7 @@ export function getAllCodexModelIds(): CodexModelId[] {
  * Uses canonical prefixed IDs for consistent routing.
  */
 export const DEFAULT_MODELS = {
-  claude: 'claude-opus-4-5-20251101',
+  claude: 'claude-opus-4-6-20260220',
   cursor: 'cursor-auto', // Cursor's recommended default (with prefix)
   codex: CODEX_MODEL_MAP.gpt52Codex, // GPT-5.2-Codex is the most advanced agentic coding model
 } as const;

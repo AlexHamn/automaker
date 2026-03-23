@@ -156,7 +156,7 @@ export function createVerifyClaudeAuthHandler() {
         const stream = query({
           prompt: "Reply with only the word 'ok'",
           options: {
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6-20260218',
             maxTurns: 1,
             allowedTools: [],
             abortController,

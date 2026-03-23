@@ -4231,7 +4231,7 @@ You can use the Read tool to view these images at any time during implementation
     const previousContent = options?.previousContent;
 
     // Validate vision support before processing images
-    const effectiveModel = model || 'claude-sonnet-4-20250514';
+    const effectiveModel = model || 'claude-sonnet-4-6-20260218';
     if (imagePaths && imagePaths.length > 0) {
       const supportsVision = ProviderFactory.modelSupportsVision(effectiveModel);
       if (!supportsVision) {
