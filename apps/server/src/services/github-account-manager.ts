@@ -42,6 +42,13 @@ export class GitHubAccountManager {
   }
 
   /**
+   * Get all accounts with raw tokens (for server-side operations like cloning).
+   */
+  async getAccountsWithTokens(): Promise<GitHubAccount[]> {
+    return this.getRawAccounts();
+  }
+
+  /**
    * Get all accounts with raw tokens (internal use only).
    */
   private async getRawAccounts(): Promise<GitHubAccount[]> {

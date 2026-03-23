@@ -1,5 +1,9 @@
 /**
  * POST /clone endpoint - Clone a GitHub template to a new project directory
+ *
+ * Tries cloning with each configured GitHub account's token when the initial
+ * clone fails (e.g., private repos). This allows cloning from any account
+ * the user has configured, not just the default GH_TOKEN.
  */
 
 import type { Request, Response } from 'express';
@@ -8,8 +12,55 @@ import path from 'path';
 import * as secureFs from '../../../lib/secure-fs.js';
 import { PathNotAllowedError } from '@automaker/platform';
 import { logger, getErrorMessage, logError } from '../common.js';
+import type { GitHubAccountManager } from '../../../services/github-account-manager.js';
 
-export function createCloneHandler() {
+/**
+ * Attempt to clone a repo, optionally injecting a token into the URL for private repos.
+ */
+function cloneRepo(
+  repoUrl: string,
+  projectPath: string,
+  parentDir: string,
+  token?: string
+): Promise<{ success: boolean; error?: string }> {
+  // If token provided, inject it into the HTTPS URL for authentication
+  const cloneUrl =
+    token && repoUrl.startsWith('https://github.com/')
+      ? repoUrl.replace('https://github.com/', `https://x-access-token:${token}@github.com/`)
+      : repoUrl;
+
+  return new Promise((resolve) => {
+    const gitProcess = spawn('git', ['clone', cloneUrl, projectPath], {
+      cwd: parentDir,
+    });
+
+    let stderr = '';
+
+    gitProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    gitProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve({ success: true });
+      } else {
+        resolve({
+          success: false,
+          error: stderr || `Git clone failed with code ${code}`,
+        });
+      }
+    });
+
+    gitProcess.on('error', (error) => {
+      resolve({
+        success: false,
+        error: `Failed to spawn git: ${error.message}`,
+      });
+    });
+  });
+}
+
+export function createCloneHandler(githubAccountManager?: GitHubAccountManager) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { repoUrl, projectName, parentDir } = req.body as {
@@ -120,41 +171,46 @@ export function createCloneHandler() {
 
       logger.info(`[Templates] Cloning ${repoUrl} to ${projectPath}`);
 
-      // Clone the repository
-      const cloneResult = await new Promise<{
-        success: boolean;
-        error?: string;
-      }>((resolve) => {
-        const gitProcess = spawn('git', ['clone', repoUrl, projectPath], {
-          cwd: parentDir,
-        });
+      // Try cloning — first without token (public repos), then with each configured account
+      let cloneResult = await cloneRepo(repoUrl, projectPath, parentDir);
 
-        let stderr = '';
+      if (!cloneResult.success && githubAccountManager) {
+        // Clone failed — likely a private repo. Try each GitHub account.
+        logger.info('[Templates] Initial clone failed, trying configured GitHub accounts...');
 
-        gitProcess.stderr.on('data', (data) => {
-          stderr += data.toString();
-        });
+        const accounts = await githubAccountManager.getAccountsWithTokens();
 
-        gitProcess.on('close', (code) => {
-          if (code === 0) {
-            resolve({ success: true });
-          } else {
-            resolve({
-              success: false,
-              error: stderr || `Git clone failed with code ${code}`,
-            });
+        for (const account of accounts) {
+          if (!account.enabled || !account.token) continue;
+
+          logger.info(`[Templates] Trying account: ${account.username || account.name}`);
+
+          // Clean up failed clone directory before retrying
+          try {
+            await secureFs.rm(projectPath, { recursive: true, force: true });
+          } catch {
+            // May not exist yet
           }
-        });
 
-        gitProcess.on('error', (error) => {
-          resolve({
-            success: false,
-            error: `Failed to spawn git: ${error.message}`,
-          });
-        });
-      });
+          cloneResult = await cloneRepo(repoUrl, projectPath, parentDir, account.token);
+
+          if (cloneResult.success) {
+            logger.info(
+              `[Templates] Clone succeeded with account: ${account.username || account.name}`
+            );
+            break;
+          }
+        }
+      }
 
       if (!cloneResult.success) {
+        // Clean up any partial clone
+        try {
+          await secureFs.rm(projectPath, { recursive: true, force: true });
+        } catch {
+          // Ignore cleanup errors
+        }
+
         res.status(500).json({
           success: false,
           error: cloneResult.error || 'Failed to clone repository',
