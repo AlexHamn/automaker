@@ -1009,7 +1009,7 @@ export class HttpApiClient implements ElectronAPI {
     return response.json();
   }
 
-  private async httpDelete<T>(endpoint: string, body?: unknown): Promise<T> {
+  async delete<T>(endpoint: string, body?: unknown): Promise<T> {
     // Ensure API key is initialized before making request
     await waitForApiKeyInit();
     const response = await fetch(`${this.serverUrl}${endpoint}`, {
@@ -1505,9 +1505,7 @@ export class HttpApiClient implements ElectronAPI {
       message?: string;
       error?: string;
     }> =>
-      this.httpDelete(
-        `/api/setup/cursor-permissions?projectPath=${encodeURIComponent(projectPath)}`
-      ),
+      this.delete(`/api/setup/cursor-permissions?projectPath=${encodeURIComponent(projectPath)}`),
 
     getCursorExampleConfig: (
       profileId?: 'strict' | 'development'
@@ -2126,7 +2124,7 @@ export class HttpApiClient implements ElectronAPI {
     setInitScript: (projectPath: string, content: string) =>
       this.put('/api/worktree/init-script', { projectPath, content }),
     deleteInitScript: (projectPath: string) =>
-      this.httpDelete('/api/worktree/init-script', { projectPath }),
+      this.delete('/api/worktree/init-script', { projectPath }),
     runInitScript: (projectPath: string, worktreePath: string, branch: string) =>
       this.post('/api/worktree/run-init-script', { projectPath, worktreePath, branch }),
     discardChanges: (worktreePath: string) =>
@@ -2615,7 +2613,7 @@ export class HttpApiClient implements ElectronAPI {
       this.post(`/api/sessions/${sessionId}/unarchive`, {}),
 
     delete: (sessionId: string): Promise<{ success: boolean; error?: string }> =>
-      this.httpDelete(`/api/sessions/${sessionId}`),
+      this.delete(`/api/sessions/${sessionId}`),
   };
 
   // Claude API
