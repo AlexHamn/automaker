@@ -369,7 +369,7 @@ describe('claude-provider.ts', () => {
     it('should include Claude Opus 4.6', () => {
       const models = provider.getAvailableModels();
 
-      const opus = models.find((m) => m.id === 'claude-opus-4-6-20260220');
+      const opus = models.find((m) => m.id === 'claude-opus-4-6');
       expect(opus).toBeDefined();
       expect(opus?.name).toBe('Claude Opus 4.6');
       expect(opus?.provider).toBe('anthropic');
@@ -378,7 +378,7 @@ describe('claude-provider.ts', () => {
     it('should include Claude Sonnet 4.6', () => {
       const models = provider.getAvailableModels();
 
-      const sonnet = models.find((m) => m.id === 'claude-sonnet-4-6-20260218');
+      const sonnet = models.find((m) => m.id === 'claude-sonnet-4-6');
       expect(sonnet).toBeDefined();
       expect(sonnet?.name).toBe('Claude Sonnet 4.6');
     });
@@ -393,14 +393,14 @@ describe('claude-provider.ts', () => {
     it('should include Claude Haiku 4.5', () => {
       const models = provider.getAvailableModels();
 
-      const haiku = models.find((m) => m.id === 'claude-haiku-4-5-20251001');
+      const haiku = models.find((m) => m.id === 'claude-haiku-4-5');
       expect(haiku).toBeDefined();
     });
 
     it('should mark Opus as default', () => {
       const models = provider.getAvailableModels();
 
-      const opus = models.find((m) => m.id === 'claude-opus-4-6-20260220');
+      const opus = models.find((m) => m.id === 'claude-opus-4-6');
       expect(opus?.default).toBe(true);
     });
 

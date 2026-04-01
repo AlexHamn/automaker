@@ -365,9 +365,9 @@ export class ClaudeProvider extends BaseProvider {
   getAvailableModels(): ModelDefinition[] {
     const models = [
       {
-        id: 'claude-opus-4-6-20260220',
+        id: 'claude-opus-4-6',
         name: 'Claude Opus 4.6',
-        modelString: 'claude-opus-4-6-20260220',
+        modelString: 'claude-opus-4-6',
         provider: 'anthropic',
         description: 'Most capable Claude model with 1M context',
         contextWindow: 1000000,
@@ -378,9 +378,9 @@ export class ClaudeProvider extends BaseProvider {
         default: true,
       },
       {
-        id: 'claude-sonnet-4-6-20260218',
+        id: 'claude-sonnet-4-6',
         name: 'Claude Sonnet 4.6',
-        modelString: 'claude-sonnet-4-6-20260218',
+        modelString: 'claude-sonnet-4-6',
         provider: 'anthropic',
         description: 'Balanced performance and cost',
         contextWindow: 200000,
@@ -402,9 +402,9 @@ export class ClaudeProvider extends BaseProvider {
         tier: 'standard' as const,
       },
       {
-        id: 'claude-haiku-4-5-20251001',
+        id: 'claude-haiku-4-5',
         name: 'Claude Haiku 4.5',
-        modelString: 'claude-haiku-4-5-20251001',
+        modelString: 'claude-haiku-4-5',
         provider: 'anthropic',
         description: 'Fastest Claude model',
         contextWindow: 200000,

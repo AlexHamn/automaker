@@ -540,7 +540,7 @@ describe('model-resolver', () => {
 
       it('should pass through unknown model with thinkingLevel', () => {
         const entry: PhaseModelEntry = { model: 'MiniMax-M2.1' as any, thinkingLevel: 'high' };
-        const customDefault = 'claude-haiku-4-5-20251001';
+        const customDefault = 'claude-haiku-4-5';
         const result = resolvePhaseModel(entry, customDefault);
 
         // Unknown models pass through, thinkingLevel is preserved

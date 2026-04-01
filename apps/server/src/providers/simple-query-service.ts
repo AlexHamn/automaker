@@ -96,7 +96,7 @@ export interface StreamingQueryOptions extends SimpleQueryOptions {
 /**
  * Default model to use when none specified
  */
-const DEFAULT_MODEL = 'claude-sonnet-4-6-20260218';
+const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
 /**
  * Execute a simple query and return the text result
