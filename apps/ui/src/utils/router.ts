@@ -18,6 +18,22 @@ export const router = createRouter({
   defaultPendingMinMs: 0,
   history,
   basepath,
+  defaultOnCatch: (error) => {
+    // When a new build is deployed, old chunk filenames no longer exist.
+    // Detect this and reload once to pick up the new index.html and chunks.
+    const msg = String(error?.message || error);
+    if (
+      msg.includes('dynamically imported module') ||
+      msg.includes('Failed to fetch') ||
+      msg.includes('Loading chunk')
+    ) {
+      const key = '__chunk_reload';
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+      }
+    }
+  },
 });
 
 declare module '@tanstack/react-router' {
