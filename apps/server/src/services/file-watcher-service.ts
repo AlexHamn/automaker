@@ -16,7 +16,7 @@ type ConvexRAGService = ReturnType<typeof getConvexRAGService>;
 const logger = createLogger('FileWatcher');
 
 const DEBOUNCE_MS = 1000;
-const VALID_EXTENSIONS = new Set(['.md', '.txt']);
+const VALID_EXTENSIONS = new Set(['.md', '.txt', '.json']);
 
 /**
  * Service that watches project directories for file changes and triggers
@@ -54,6 +54,7 @@ class FileWatcherService {
           if (!filename) return;
           if (!VALID_EXTENSIONS.has(path.extname(filename).toLowerCase())) return;
           if (filename === '_index.md') return; // Skip memory index file
+          if (filename === 'context-metadata.json') return; // Skip metadata file
 
           const filePath = path.join(dir, filename);
           this.handleFileChange(projectPath, filePath, type, eventType);

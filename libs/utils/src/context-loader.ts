@@ -134,6 +134,13 @@ async function loadContextMetadata(
 }
 
 /**
+ * Maximum content size (in characters) to include inline in the prompt.
+ * Files exceeding this threshold are referenced by path instead, so the
+ * agent can read them on demand without bloating the system prompt.
+ */
+const MAX_INLINE_CONTENT_LENGTH = 30000;
+
+/**
  * Format a single context file entry for the prompt
  */
 function formatContextFileEntry(file: ContextFileInfo): string {
@@ -145,7 +152,18 @@ function formatContextFileEntry(file: ContextFileInfo): string {
     descriptionInfo = `\n**Purpose:** ${file.description}`;
   }
 
-  return `${header}\n${pathInfo}${descriptionInfo}\n\n${file.content}`;
+  // For large files, include only the description and a reference to read on demand.
+  // This prevents bloating the system prompt with huge files (e.g. Postman collections).
+  if (file.content.length > MAX_INLINE_CONTENT_LENGTH) {
+    const sizeKb = Math.round(file.content.length / 1024);
+    return `${header}\n${pathInfo}${descriptionInfo}\n\n*This file is large (${sizeKb} KB). Read it from the path above when you need specific details.*`;
+  }
+
+  // Wrap JSON content in a fenced code block for better AI readability
+  const isJson = file.name.toLowerCase().endsWith('.json');
+  const content = isJson ? `\`\`\`json\n${file.content}\n\`\`\`` : file.content;
+
+  return `${header}\n${pathInfo}${descriptionInfo}\n\n${content}`;
 }
 
 /**
@@ -233,9 +251,13 @@ export async function loadContextFiles(
       const allFiles = await fsModule.readdir(contextDir);
 
       // Filter for text-based context files (case-insensitive for cross-platform)
+      // Supports: .md, .txt, and .json (e.g., Postman collections, API specs)
       const textFiles = allFiles.filter((f) => {
         const lower = f.toLowerCase();
-        return (lower.endsWith('.md') || lower.endsWith('.txt')) && f !== 'context-metadata.json';
+        return (
+          (lower.endsWith('.md') || lower.endsWith('.txt') || lower.endsWith('.json')) &&
+          f !== 'context-metadata.json'
+        );
       });
 
       if (textFiles.length > 0) {
@@ -470,7 +492,10 @@ export async function getContextFilesSummary(
 
     const textFiles = allFiles.filter((f) => {
       const lower = f.toLowerCase();
-      return (lower.endsWith('.md') || lower.endsWith('.txt')) && f !== 'context-metadata.json';
+      return (
+        (lower.endsWith('.md') || lower.endsWith('.txt') || lower.endsWith('.json')) &&
+        f !== 'context-metadata.json'
+      );
     });
 
     if (textFiles.length === 0) {

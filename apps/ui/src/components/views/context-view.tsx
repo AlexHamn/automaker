@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/header-actions-panel';
 import {
   FileText,
+  FileJson,
   Image as ImageIcon,
   Trash2,
   Save,
@@ -56,7 +57,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 interface ContextFile {
   name: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'json';
   content?: string;
   path: string;
   description?: string;
@@ -134,6 +135,12 @@ export function ContextView() {
     return imageExtensions.includes(ext);
   };
 
+  // Determine if a file is JSON based on extension
+  const isJsonFile = (filename: string): boolean => {
+    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+    return ext === '.json';
+  };
+
   // Load context metadata
   const loadMetadata = useCallback(async (): Promise<ContextMetadata> => {
     const contextPath = getContextPath();
@@ -198,7 +205,7 @@ export function ContextView() {
           .filter((entry) => entry.isFile && entry.name !== 'context-metadata.json')
           .map((entry) => ({
             name: entry.name,
-            type: isImageFile(entry.name) ? 'image' : 'text',
+            type: isImageFile(entry.name) ? 'image' : isJsonFile(entry.name) ? 'json' : 'text',
             path: `${contextPath}/${entry.name}`,
             description: metadata.files[entry.name]?.description,
           }));
@@ -236,7 +243,7 @@ export function ContextView() {
       // Could add a confirmation dialog here
     }
     loadFileContent(file);
-    setIsPreviewMode(isMarkdownFile(file.name));
+    setIsPreviewMode(isMarkdownFile(file.name) || isJsonFile(file.name));
   };
 
   // Save current file
@@ -582,7 +589,7 @@ export function ContextView() {
       // Update selected file with new name and path
       const renamedFile: ContextFile = {
         name: newName,
-        type: isImageFile(newName) ? 'image' : 'text',
+        type: isImageFile(newName) ? 'image' : isJsonFile(newName) ? 'json' : 'text',
         path: newPath,
         content: result.content,
         description: metadata.files[newName]?.description,
@@ -824,6 +831,8 @@ export function ContextView() {
                     >
                       {file.type === 'image' ? (
                         <ImageIcon className="w-4 h-4 flex-shrink-0" />
+                      ) : file.type === 'json' ? (
+                        <FileJson className="w-4 h-4 flex-shrink-0" />
                       ) : (
                         <FileText className="w-4 h-4 flex-shrink-0" />
                       )}
@@ -889,33 +898,36 @@ export function ContextView() {
                 <div className="flex items-center gap-2 min-w-0">
                   {selectedFile.type === 'image' ? (
                     <ImageIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  ) : selectedFile.type === 'json' ? (
+                    <FileJson className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   ) : (
                     <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   )}
                   <span className="text-sm font-medium truncate">{selectedFile.name}</span>
                 </div>
                 <div className="flex gap-2">
-                  {selectedFile.type === 'text' && isMarkdownFile(selectedFile.name) && (
-                    <Button
-                      variant={'outline'}
-                      size="sm"
-                      onClick={() => setIsPreviewMode(!isPreviewMode)}
-                      data-testid="toggle-preview-mode"
-                    >
-                      {isPreviewMode ? (
-                        <>
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Edit
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Preview
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  {selectedFile.type === 'text' && (
+                  {(selectedFile.type === 'text' || selectedFile.type === 'json') &&
+                    (isMarkdownFile(selectedFile.name) || isJsonFile(selectedFile.name)) && (
+                      <Button
+                        variant={'outline'}
+                        size="sm"
+                        onClick={() => setIsPreviewMode(!isPreviewMode)}
+                        data-testid="toggle-preview-mode"
+                      >
+                        {isPreviewMode ? (
+                          <>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Preview
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  {(selectedFile.type === 'text' || selectedFile.type === 'json') && (
                     <Button
                       size="sm"
                       onClick={saveFile}
@@ -985,6 +997,18 @@ export function ContextView() {
                       className="max-w-full max-h-full object-contain"
                     />
                   </div>
+                ) : isPreviewMode && selectedFile.type === 'json' ? (
+                  <Card className="h-full overflow-auto p-4" data-testid="json-preview">
+                    <pre className="font-mono text-sm whitespace-pre-wrap break-words">
+                      {(() => {
+                        try {
+                          return JSON.stringify(JSON.parse(editedContent), null, 2);
+                        } catch {
+                          return editedContent;
+                        }
+                      })()}
+                    </pre>
+                  </Card>
                 ) : isPreviewMode ? (
                   <Card className="h-full overflow-auto p-4" data-testid="markdown-preview">
                     <Markdown>{editedContent}</Markdown>
@@ -995,7 +1019,11 @@ export function ContextView() {
                       className="w-full h-full p-4 font-mono text-sm bg-transparent resize-none focus:outline-none"
                       value={editedContent}
                       onChange={(e) => handleContentChange(e.target.value)}
-                      placeholder="Enter context content here..."
+                      placeholder={
+                        selectedFile.type === 'json'
+                          ? 'Enter JSON content here...'
+                          : 'Enter context content here...'
+                      }
                       spellCheck={false}
                       data-testid="context-editor"
                     />

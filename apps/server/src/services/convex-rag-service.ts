@@ -222,7 +222,10 @@ class ConvexRAGService {
       await secureFs.access(contextDir);
       const files = await secureFs.readdir(contextDir);
       for (const file of files) {
-        if (file.endsWith('.md') || file.endsWith('.txt')) {
+        if (
+          (file.endsWith('.md') || file.endsWith('.txt') || file.endsWith('.json')) &&
+          file !== 'context-metadata.json'
+        ) {
           const filePath = path.join(contextDir, file);
           const result = await this.indexContextFile(projectPath, filePath);
           contextFiles.push(result);
