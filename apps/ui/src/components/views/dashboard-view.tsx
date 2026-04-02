@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { WorkspacePickerModal } from '@/components/dialogs/workspace-picker-modal';
-import type { StarterTemplate } from '@/lib/templates';
 import {
   FolderOpen,
   Plus,
@@ -320,87 +319,6 @@ export function DashboardView() {
       navigate({ to: '/board' });
     } catch (error) {
       logger.error('Failed to create project:', error);
-      toast.error('Failed to create project', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleCreateFromTemplate = async (
-    template: StarterTemplate,
-    projectName: string,
-    parentDir: string
-  ) => {
-    setIsCreating(true);
-    try {
-      const httpClient = getHttpApiClient();
-      const api = getElectronAPI();
-
-      const cloneResult = await httpClient.templates.clone(
-        template.repoUrl,
-        projectName,
-        parentDir
-      );
-      if (!cloneResult.success || !cloneResult.projectPath) {
-        toast.error('Failed to clone template', {
-          description: cloneResult.error || 'Unknown error occurred',
-        });
-        return;
-      }
-
-      const projectPath = cloneResult.projectPath;
-      const initResult = await initializeProject(projectPath);
-      if (!initResult.success) {
-        toast.error('Failed to initialize project', {
-          description: initResult.error || 'Unknown error occurred',
-        });
-        return;
-      }
-
-      await api.writeFile(
-        `${projectPath}/.automaker/app_spec.txt`,
-        `<project_specification>
-  <project_name>${projectName}</project_name>
-
-  <overview>
-    This project was created from the "${template.name}" starter template.
-    ${template.description}
-  </overview>
-
-  <technology_stack>
-    ${template.techStack.map((tech) => `<technology>${tech}</technology>`).join('\n    ')}
-  </technology_stack>
-
-  <core_capabilities>
-    ${template.features.map((feature) => `<capability>${feature}</capability>`).join('\n    ')}
-  </core_capabilities>
-
-  <implemented_features>
-    <!-- The AI agent will populate this based on code analysis -->
-  </implemented_features>
-</project_specification>`
-      );
-
-      const project = {
-        id: `project-${Date.now()}`,
-        name: projectName,
-        path: projectPath,
-        lastOpened: new Date().toISOString(),
-      };
-
-      addProject(project);
-      setCurrentProject(project);
-      setShowNewProjectModal(false);
-
-      toast.success('Project created from template', {
-        description: `Created ${projectName} from ${template.name}`,
-      });
-
-      navigate({ to: '/board' });
-    } catch (error) {
-      logger.error('Failed to create project from template:', error);
       toast.error('Failed to create project', {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
@@ -976,7 +894,6 @@ export function DashboardView() {
         open={showNewProjectModal}
         onOpenChange={setShowNewProjectModal}
         onCreateBlankProject={handleCreateBlankProject}
-        onCreateFromTemplate={handleCreateFromTemplate}
         onCreateFromCustomUrl={handleCreateFromCustomUrl}
         isCreating={isCreating}
       />

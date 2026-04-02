@@ -80,7 +80,6 @@ export function ProjectSwitcher() {
     setShowOnboardingDialog,
     newProjectName,
     handleCreateBlankProject,
-    handleCreateFromTemplate,
     handleCreateFromCustomUrl,
   } = useProjectCreation({
     upsertAndSetCurrentProject,
@@ -493,7 +492,6 @@ export function ProjectSwitcher() {
         open={showNewProjectModal}
         onOpenChange={setShowNewProjectModal}
         onCreateBlankProject={handleCreateBlankProject}
-        onCreateFromTemplate={handleCreateFromTemplate}
         onCreateFromCustomUrl={handleCreateFromCustomUrl}
         isCreating={isCreatingProject}
       />

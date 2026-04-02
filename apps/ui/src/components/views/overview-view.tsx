@@ -23,7 +23,6 @@ import { WorkspacePickerModal } from '@/components/dialogs/workspace-picker-moda
 import { ProjectStatusCard } from './overview/project-status-card';
 import { RecentActivityFeed } from './overview/recent-activity-feed';
 import { RunningAgentsPanel } from './overview/running-agents-panel';
-import type { StarterTemplate } from '@/lib/templates';
 import {
   LayoutDashboard,
   RefreshCw,
@@ -148,51 +147,6 @@ export function OverviewView() {
         navigate({ to: '/board' });
       } catch (error) {
         logger.error('Failed to create project:', error);
-        toast.error('Failed to create project', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        });
-      } finally {
-        setIsCreating(false);
-      }
-    },
-    [upsertAndSetCurrentProject, navigate]
-  );
-
-  const handleCreateFromTemplate = useCallback(
-    async (template: StarterTemplate, projectName: string, parentDir: string) => {
-      setIsCreating(true);
-      try {
-        const httpClient = getHttpApiClient();
-        const cloneResult = await httpClient.templates.clone(
-          template.repoUrl,
-          projectName,
-          parentDir
-        );
-
-        if (!cloneResult.success || !cloneResult.projectPath) {
-          toast.error('Failed to clone template', {
-            description: cloneResult.error || 'Unknown error occurred',
-          });
-          return;
-        }
-
-        const initResult = await initializeProject(cloneResult.projectPath);
-        if (!initResult.success) {
-          toast.error('Failed to initialize project', {
-            description: initResult.error || 'Unknown error occurred',
-          });
-          return;
-        }
-
-        upsertAndSetCurrentProject(cloneResult.projectPath, projectName);
-        setShowNewProjectModal(false);
-
-        toast.success('Project created from template', {
-          description: `Created ${projectName} from ${template.name}`,
-        });
-        navigate({ to: '/board' });
-      } catch (error) {
-        logger.error('Failed to create from template:', error);
         toast.error('Failed to create project', {
           description: error instanceof Error ? error.message : 'Unknown error',
         });
@@ -504,7 +458,6 @@ export function OverviewView() {
         open={showNewProjectModal}
         onOpenChange={setShowNewProjectModal}
         onCreateBlankProject={handleCreateBlankProject}
-        onCreateFromTemplate={handleCreateFromTemplate}
         onCreateFromCustomUrl={handleCreateFromCustomUrl}
         isCreating={isCreating}
       />

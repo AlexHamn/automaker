@@ -5,7 +5,6 @@ import { getElectronAPI } from '@/lib/electron';
 const logger = createLogger('ProjectCreation');
 import { initializeProject } from '@/lib/project-init';
 import { toast } from 'sonner';
-import type { StarterTemplate } from '@/lib/templates';
 import type { Project } from '@/lib/electron';
 
 interface UseProjectCreationProps {
@@ -108,75 +107,6 @@ export function useProjectCreation({ upsertAndSetCurrentProject }: UseProjectCre
   );
 
   /**
-   * Create project from a starter template
-   */
-  const handleCreateFromTemplate = useCallback(
-    async (template: StarterTemplate, projectName: string, parentDir: string) => {
-      setIsCreatingProject(true);
-      try {
-        const api = getElectronAPI();
-
-        // Clone template repository
-        if (!api.templates) {
-          throw new Error('Templates API is not available');
-        }
-        const cloneResult = await api.templates.clone(template.repoUrl, projectName, parentDir);
-        if (!cloneResult.success) {
-          throw new Error(cloneResult.error || 'Failed to clone template');
-        }
-        const projectPath = cloneResult.projectPath!;
-
-        // Initialize .automaker directory structure
-        await initializeProject(projectPath);
-
-        // Write app_spec.txt with template-specific info
-        await api.writeFile(
-          `${projectPath}/.automaker/app_spec.txt`,
-          `<project_specification>
-  <project_name>${projectName}</project_name>
-
-  <overview>
-    This project was created from the "${template.name}" starter template.
-    ${template.description}
-  </overview>
-
-  <technology_stack>
-    ${template.techStack.map((tech) => `<technology>${tech}</technology>`).join('\n    ')}
-  </technology_stack>
-
-  <core_capabilities>
-    ${template.features.map((feature) => `<capability>${feature}</capability>`).join('\n    ')}
-  </core_capabilities>
-
-  <implemented_features>
-    <!-- The AI agent will populate this based on code analysis -->
-  </implemented_features>
-</project_specification>`
-        );
-
-        // Let the store handle theme (trashed project recovery or undefined for global)
-        upsertAndSetCurrentProject(projectPath, projectName);
-        setShowNewProjectModal(false);
-        setNewProjectName(projectName);
-        setNewProjectPath(projectPath);
-        setShowOnboardingDialog(true);
-
-        toast.success('Project created from template', {
-          description: `Created ${projectName} from ${template.name}`,
-        });
-      } catch (error) {
-        logger.error('Failed to create from template:', error);
-        toast.error('Failed to create project from template', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        });
-      } finally {
-        setIsCreatingProject(false);
-      }
-    },
-    [upsertAndSetCurrentProject]
-  );
-
-  /**
    * Create project from a custom GitHub URL
    */
   const handleCreateFromCustomUrl = useCallback(
@@ -261,7 +191,6 @@ export function useProjectCreation({ upsertAndSetCurrentProject }: UseProjectCre
 
     // Handlers
     handleCreateBlankProject,
-    handleCreateFromTemplate,
     handleCreateFromCustomUrl,
   };
 }
